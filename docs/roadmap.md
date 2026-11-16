@@ -84,7 +84,8 @@ provide the pieces needed for the first round, which uses ED/DQMC numerics as hi
 - ✅ `AGENTS.md`, `GOVERNANCE.md`, `CONTRIBUTING.md`, issue and PR templates, `CODEOWNERS`
 - ✅ Results registry: append-only, content-addressed submissions and reproductions;
   computed verification status; CI validation with re-runs of cheap results
-- ⬜ Bot that checks a record's `contributor.handle` matches the PR author
+- ✅ CI check that every added record's `contributor.handle` matches the PR author
+  (`superconductor check-authorship`; maintainer override via the `registry-import` label)
 - ⬜ Automatic claim expiry and labelling for the task queue
 - ⬜ Contribution dashboard (per-person credit, unverified results needing reproduction)
 - ⬜ Move the registry to a dedicated append-only store once it outgrows git

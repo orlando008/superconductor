@@ -1,6 +1,7 @@
 """Command-line entry point for the workbench.
 
-Commands: solve, crosscheck, fingerprint, solvers, submit, reproduce, validate, status.
+Commands: solve, crosscheck, fingerprint, solvers, submit, reproduce, validate, status,
+check-authorship.
 """
 
 from __future__ import annotations
@@ -81,7 +82,7 @@ def _reproduce(args) -> int:
         print(f"No submission {args.submission_id} in {args.results}", file=sys.stderr)
         return 1
     _, sub = reg.submissions[args.submission_id]
-    if sub.contributor.handle == args.handle:
+    if sub.contributor.handle.lower() == args.handle.lower():
         print("A reproduction must come from a different contributor.", file=sys.stderr)
         return 1
     rep = create_reproduction(sub, _contributor(args), solver_name=args.solver, notes=args.notes)
@@ -121,6 +122,25 @@ def _status(args) -> int:
             f"disagree={len(st.disagreeing)}  {sub.provenance.solver:<8} {label}"
         )
     return 0
+
+
+def _check_authorship(args) -> int:
+    from superconductor.registry import check_added_records_authorship
+
+    if args.added_files == "-":
+        lines = sys.stdin.read().splitlines()
+    else:
+        with open(args.added_files) as fh:
+            lines = fh.read().splitlines()
+    findings = check_added_records_authorship(lines, args.author, repo_root=args.repo_root)
+    for f in findings:
+        print(f)
+    n_records = sum(1 for line in lines if line.strip().endswith(".json"))
+    print(
+        f"{n_records} added record file(s) checked against author {args.author!r}: "
+        f"{len(findings)} problem(s)"
+    )
+    return 1 if findings else 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -174,6 +194,17 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("status", help="Show the verification status of every submission")
     add_registry_args(p)
     p.set_defaults(func=_status)
+
+    p = sub.add_parser(
+        "check-authorship",
+        help="Check that added result records name the given PR author (used by CI)",
+    )
+    p.add_argument("--author", required=True, help="GitHub login of the pull request author")
+    p.add_argument(
+        "--added-files", default="-", help="File listing added paths, one per line ('-' = stdin)"
+    )
+    p.add_argument("--repo-root", default=".", help="Root the listed paths are relative to")
+    p.set_defaults(func=_check_authorship)
 
     args = parser.parse_args(argv)
     return args.func(args)

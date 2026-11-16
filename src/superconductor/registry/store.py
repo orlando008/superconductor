@@ -65,16 +65,16 @@ class Registry:
         _, sub = self.submissions[submission_id]
         agree, disagree, other = [], [], []
         for _, rep in self.reproductions.get(submission_id, []):
-            if rep.contributor.handle == sub.contributor.handle:
+            if same_person(rep.contributor, sub.contributor):
                 continue  # not independent; flagged by validation
             if rep.result.model_fingerprint != sub.result.model_fingerprint:
                 continue
             if reproduction_agrees(sub, rep):
-                agree.append(rep.contributor.handle)
+                agree.append(rep.contributor.handle.lower())
                 if rep.provenance.solver != sub.provenance.solver:
-                    other.append(rep.contributor.handle)
+                    other.append(rep.contributor.handle.lower())
             else:
-                disagree.append(rep.contributor.handle)
+                disagree.append(rep.contributor.handle.lower())
         state = "disputed" if disagree else "reproduced" if agree else "unverified"
         return SubmissionStatus(
             state,
@@ -82,6 +82,11 @@ class Registry:
             tuple(sorted(set(disagree))),
             tuple(sorted(set(other))),
         )
+
+
+def same_person(a: Contributor, b: Contributor) -> bool:
+    """GitHub logins are case-insensitive: 'Alice' and 'alice' are one account."""
+    return a.handle.lower() == b.handle.lower()
 
 
 def _rel(path: Path, root: Path) -> str:
@@ -199,7 +204,7 @@ def validate_registry(reg: Registry, reproduce: bool = False) -> list[Finding]:
                 findings.append(Finding("error", p, "unknown-submission", f"no submission {sid}"))
                 continue
             _, sub = reg.submissions[sid]
-            if rep.contributor.handle == sub.contributor.handle:
+            if same_person(rep.contributor, sub.contributor):
                 findings.append(
                     Finding("error", p, "not-independent", "reproducer is the original submitter")
                 )
