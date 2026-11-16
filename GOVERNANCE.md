@@ -29,6 +29,16 @@ The scarce resource is expert attention. It goes where automated checks are weak
 
 Results become *trusted* through independent reproduction, not through review.
 
+### Importing records for others
+
+CI rejects pull requests that add result records naming anyone other than the PR author.
+A maintainer importing records on others' behalf (e.g. migrating results from another
+source) applies the `registry-import` label, which skips that check for the PR. Before
+merging such a PR, the maintainer must confirm that each named contributor agreed to the
+import, and must review the final commit: the label stays on if more commits are pushed.
+Branch protection that dismisses stale approvals and requires approval of the most recent
+push makes this re-review mandatory.
+
 ## Decisions
 
 - Day-to-day decisions: maintainers, by lazy consensus on the issue or PR.

@@ -22,6 +22,10 @@ results/
   they're stronger evidence.
 - **A responsible human.** `contributor.handle` is a GitHub username. Agents identify
   themselves in `contributor.agent`.
+- **You can only add records in your own name.** CI fails a pull request if any record it
+  adds names a contributor other than the PR author (case-insensitive). Without this, anyone
+  could fake an "independent" reproduction. Maintainers importing records for others in bulk
+  apply the `registry-import` label, which only people with triage access can do.
 
 ## Workflow
 

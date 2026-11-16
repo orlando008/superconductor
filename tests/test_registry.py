@@ -104,6 +104,15 @@ def test_self_reproduction_is_not_independent(root):
     assert reg.status(sub.id).state == "unverified"
 
 
+def test_handle_case_does_not_make_a_reproduction_independent(root):
+    sub = create_submission(MODEL, "ed", ALICE)
+    write_record(root, sub)
+    write_record(root, create_reproduction(sub, Contributor(handle="ALICE")))
+    reg = load_registry(root)
+    assert "not-independent" in codes(validate_registry(reg))
+    assert reg.status(sub.id).state == "unverified"
+
+
 def test_disagreeing_reproduction_marks_submission_disputed(root):
     sub = create_submission(MODEL, "ed", ALICE)
     write_record(root, sub)

@@ -3,6 +3,8 @@ name: CI
 on:
   push:
   pull_request:
+    # labeled/unlabeled: re-run when a maintainer adds or removes "registry-import".
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 # Untrusted contributions run here: read-only token, no secrets.
 permissions:
@@ -50,5 +52,19 @@ jobs:
             echo "$changed"
             exit 1
           fi
+      - name: New records name the PR author
+        if: github.event_name == 'pull_request'
+        shell: bash  # -eo pipefail: a failing git diff must fail the step, not pass silently
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          IMPORT_APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'registry-import') }}
+        run: |
+          if [ "$IMPORT_APPROVED" = "true" ]; then
+            echo "::notice::Authorship check skipped: a maintainer applied the 'registry-import' label."
+            exit 0
+          fi
+          git diff --name-only --diff-filter=A "$BASE_SHA" HEAD -- results/submissions results/reproductions \
+            | superconductor check-authorship --author "$PR_AUTHOR"
       - name: Validate and re-run cheap submissions
         run: superconductor validate --reproduce
