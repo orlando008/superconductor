@@ -79,6 +79,17 @@ provide the pieces needed for the first round, which uses ED/DQMC numerics as hi
 - ⬜ Derivation checker (symbolic algebra, diagram rules, limits)
 - ⬜ Theory registry: mechanisms written as executable predictions, scored against layer 6
 
+## Community infrastructure 🟡
+
+- ✅ `AGENTS.md`, `GOVERNANCE.md`, `CONTRIBUTING.md`, issue and PR templates, `CODEOWNERS`
+- ✅ Results registry: append-only, content-addressed submissions and reproductions;
+  computed verification status; CI validation with re-runs of cheap results
+- ⬜ Bot that checks a record's `contributor.handle` matches the PR author
+- ⬜ Automatic claim expiry and labelling for the task queue
+- ⬜ Contribution dashboard (per-person credit, unverified results needing reproduction)
+- ⬜ Move the registry to a dedicated append-only store once it outgrows git
+- ⬜ Separate scoring service holding hidden answers for layer 6
+
 ## Suggested next steps
 
 1. Symmetry-resolved ED to reach 16-site (4×4) clusters, the classic benchmark size.

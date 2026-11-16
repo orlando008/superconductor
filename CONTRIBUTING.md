@@ -3,6 +3,13 @@
 This repository is meant to be worked on by many contributors at once, human and AI. The
 rules below are what keeps parallel work trustworthy.
 
+- **Using an AI agent?** It must follow [AGENTS.md](AGENTS.md). That file also explains how
+  to pick a task, what "done" means, and how to submit or reproduce results.
+- **Roles, review, credit, licensing and disputes:** see [GOVERNANCE.md](GOVERNANCE.md).
+- **Results:** see [results/README.md](results/README.md).
+- **Sign off your commits** (`git commit -s`) to certify the
+  [Developer Certificate of Origin](https://developercertificate.org/).
+
 ## Ground rules
 
 1. **Every result is traceable.** Solvers return a `Result` carrying the model fingerprint,
@@ -17,7 +24,9 @@ rules below are what keeps parallel work trustworthy.
    over regression snapshots. Say in the test where the expected value comes from.
 5. **Wrap, don't rewrite.** For established methods (DQMC, DMFT, DMRG, NQS), wrap existing
    open-source codes (ALF, TRIQS, ITensor, TeNPy, NetKet) behind the `Solver` interface.
-6. **Conventions live in one place.** Sign conventions, units and indexing are documented in
+6. **Results are append-only and need independent reproduction.** Never edit a record under
+   `results/`. A result counts once a different contributor has reproduced it.
+7. **Conventions live in one place.** Sign conventions, units and indexing are documented in
    `model/hubbard.py` and `model/lattice.py`. Changing them means bumping `SCHEMA_VERSION`.
 
 ## Development
@@ -36,6 +45,10 @@ ruff check . && ruff format --check .
 
 ```bash
 superconductor crosscheck
+```
+
+```bash
+superconductor validate --reproduce
 ```
 
 ## Adding a solver

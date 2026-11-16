@@ -4,14 +4,21 @@ on:
   push:
   pull_request:
 
+# Untrusted contributions run here: read-only token, no secrets.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -19,3 +26,29 @@ jobs:
       - run: ruff check . && ruff format --check .
       - run: python -m pytest
       - run: superconductor crosscheck
+
+  registry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e .
+      - name: Results are append-only
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          changed=$(git diff --name-only --diff-filter=MDRT "$BASE_SHA" HEAD -- results/submissions results/reproductions)
+          if [ -n "$changed" ]; then
+            echo "::error::Existing result records were modified or deleted (records are append-only):"
+            echo "$changed"
+            exit 1
+          fi
+      - name: Validate and re-run cheap submissions
+        run: superconductor validate --reproduce

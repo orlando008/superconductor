@@ -29,6 +29,8 @@ verification platform where every result is traceable, cross-checked and scorabl
   - `atomic`: exact solution at t = t' = 0
 - Automatic cross-validation (`crosscheck`) across a standard suite of models, plus rigorous
   sanity checks on every result (double-occupancy bounds, free-fermion energy bounds).
+- A results registry: `submit`, `reproduce`, `validate` and `status` commands for
+  crowd-sourced, independently reproduced results.
 
 The cross-check suite has already paid for itself. It caught ARPACK silently returning the
 wrong ground-state energy for a heavily degenerate Hamiltonian (see `solvers/ed.py`).
@@ -74,17 +76,31 @@ src/superconductor/
   model/        layer 1: lattice + Hamiltonian specification, fingerprints
   solvers/      layer 2: Solver interface, registry, ED and exact-limit solvers
   validation/   cross-validation between solvers; sanity checks on results
+  registry/     submission/reproduction records, validation, verification status
   cli.py        `superconductor` command
 examples/       model files
+results/        crowd-sourced result records (append-only)
 tests/          analytic results, symmetries, cross-checks
 docs/           vision and roadmap
 ```
 
-## Contributing
+## Contributing (humans and agents)
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: every result must carry its model
-fingerprint, every solver must join the cross-check suite, and tolerances are never loosened
-to make a disagreement go away.
+This repository is meant to be a hub for crowd-sourced work: many people pointing their
+agents at it to write code, run calculations, reproduce each other's results, and propose
+tests. To make that trustworthy at scale:
+
+- **Pick work** from issues labelled `agent-ready`. Each one has checkable acceptance criteria.
+- **Submit results** with `superconductor submit` and **verify others'** with
+  `superconductor reproduce`. Records in [`results/`](results/README.md) are append-only and
+  content-addressed. A result counts once a *different* contributor reproduces it.
+- **Report disagreements** as findings. Never adjust numbers or tolerances to hide them.
+- CI checks every PR: tests, the cross-check suite, registry validation (with re-runs of cheap
+  results), and that no existing record was changed.
+
+Start with [AGENTS.md](AGENTS.md) (rules for agents and their operators),
+[CONTRIBUTING.md](CONTRIBUTING.md), and [GOVERNANCE.md](GOVERNANCE.md) (roles, review, credit,
+licensing, disputes).
 
 ## License
 

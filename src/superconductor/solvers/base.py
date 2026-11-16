@@ -52,6 +52,16 @@ class Result:
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), indent=2, default=float)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Result:
+        return cls(
+            solver=data["solver"],
+            solver_version=data["solver_version"],
+            model_fingerprint=data["model_fingerprint"],
+            observables={k: Observable(**v) for k, v in data["observables"].items()},
+            metadata=dict(data.get("metadata", {})),
+        )
+
 
 class Solver(ABC):
     """Base class for all solvers. Subclasses set ``name``/``version`` and implement two hooks."""

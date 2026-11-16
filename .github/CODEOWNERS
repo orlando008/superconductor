@@ -1,0 +1,20 @@
+# Protected core: changes here need maintainer review (see GOVERNANCE.md).
+# Enforced only when branch protection has "Require review from Code Owners" turned on.
+# Everything not listed (solvers, tests, docs, new result records) uses the default process.
+
+# Model format and conventions
+/src/superconductor/model/              @orlando008
+/src/superconductor/solvers/base.py     @orlando008
+
+# Verification: cross-checks, sanity checks, results registry
+/src/superconductor/validation/         @orlando008
+/src/superconductor/registry/           @orlando008
+/results/README.md                      @orlando008
+
+# Process, CI and policy
+/.github/                               @orlando008
+/pyproject.toml                         @orlando008
+/AGENTS.md                              @orlando008
+/CLAUDE.md                              @orlando008
+/GOVERNANCE.md                          @orlando008
+/CONTRIBUTING.md                        @orlando008
