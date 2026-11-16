@@ -1,0 +1,46 @@
+name: Task
+description: A well-specified piece of work with acceptance criteria (maintainers mark it agent-ready).
+labels: ["type: task"]
+body:
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Layer
+      options:
+        - "1: Model format"
+        - "2: Solvers and cross-checks"
+        - "3: Materials to models"
+        - "4: Forward models"
+        - "5: Experimental database"
+        - "6: Prediction challenge"
+        - "7: Agent tools"
+        - "Infrastructure / process"
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should exist when this is done, and why it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkable conditions. Prefer known answers, symmetries, bounds, or cross-checks.
+      placeholder: |
+        - [ ] ...
+        - [ ] Tests compare against <analytic result / independent method>
+    validations:
+      required: true
+  - type: textarea
+    id: pointers
+    attributes:
+      label: Pointers
+      description: Relevant files, papers, existing codes.
+  - type: dropdown
+    id: size
+    attributes:
+      label: Estimated size
+      options: ["Small (< 200 lines)", "Medium (200-800 lines)", "Large (should be split)"]

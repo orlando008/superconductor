@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1",
+  "model": "hubbard",
+  "name": "2x2 Hubbard, half filling, U=4t",
+  "lattice": {
+    "kind": "square",
+    "lx": 2,
+    "ly": 2,
+    "boundary_x": "periodic",
+    "boundary_y": "periodic"
+  },
+  "t": 1.0,
+  "t_prime": 0.0,
+  "U": 4.0,
+  "mu": 0.0,
+  "filling": {
+    "n_up": 2,
+    "n_dn": 2
+  },
+  "temperature": 0.0
+}

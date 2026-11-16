@@ -1,0 +1,24 @@
+name: Test or research idea
+description: Propose a new check, exact limit, benchmark, or physics question for the platform.
+labels: ["type: idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+    validations:
+      required: true
+  - type: textarea
+    id: check
+    attributes:
+      label: How it would be checked
+      description: |
+        What known answer, symmetry, bound, or independent method makes this verifiable?
+        Ideas without a way to check them are hard to act on.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Papers, textbook results, existing codes.

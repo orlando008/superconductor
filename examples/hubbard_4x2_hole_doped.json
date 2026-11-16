@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1",
+  "model": "hubbard",
+  "name": "4x2 t-t'-U, p=0.25 hole doping, U=8t",
+  "lattice": {
+    "kind": "square",
+    "lx": 4,
+    "ly": 2,
+    "boundary_x": "periodic",
+    "boundary_y": "periodic"
+  },
+  "t": 1.0,
+  "t_prime": -0.3,
+  "U": 8.0,
+  "mu": 0.0,
+  "filling": {
+    "n_up": 3,
+    "n_dn": 3
+  },
+  "temperature": 0.0
+}

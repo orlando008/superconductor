@@ -1,0 +1,38 @@
+name: Disagreement
+description: Two methods, a submission and a reproduction, or theory and data disagree.
+labels: ["type: disagreement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Disagreements are findings. Don't resolve them by editing records or loosening tolerances.
+  - type: textarea
+    id: what
+    attributes:
+      label: What disagrees
+      description: Submission/reproduction ids, solvers, model fingerprint, observables and values.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: diagnosis
+    attributes:
+      label: Current best guess
+      options:
+        - Unknown
+        - Bug in one method
+        - Method used outside its regime of validity
+        - Convergence / finite-size / statistics
+        - Real physics
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Evidence for the guess

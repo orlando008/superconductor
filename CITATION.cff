@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use this platform or its results, please cite it as below."
+title: "superconductor: a correlated-electron workbench for cuprate research"
+authors:
+  - name: "The superconductor workbench contributors"
+repository-code: "https://github.com/orlando008/superconductor"
+license: MIT
+version: 0.1.0
+keywords:
+  - cuprates
+  - high-temperature superconductivity
+  - Hubbard model
+  - strongly correlated electrons
+  - exact diagonalization
+  - benchmarks

@@ -1,0 +1,29 @@
+name: Result request or report
+description: Ask for a calculation to be run, or describe a result you plan to submit that needs discussion.
+labels: ["type: result"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Routine results don't need an issue. Run `superconductor submit` and open a PR with the new
+        file under `results/`. Use this template for calculations that need coordination (expensive
+        runs, new observables, results that look surprising).
+  - type: textarea
+    id: model
+    attributes:
+      label: Model
+      description: Paste the model JSON, or a fingerprint for an existing model.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What to compute and why
+    validations:
+      required: true
+  - type: input
+    id: cost
+    attributes:
+      label: Estimated cost
+      placeholder: "e.g. ED sector dimension 2.4M, ~3 core-hours"
