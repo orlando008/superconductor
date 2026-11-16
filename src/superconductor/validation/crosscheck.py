@@ -87,6 +87,8 @@ def standard_suite() -> list[HubbardModel]:
 
     Covers U = 0 (ED vs free fermions) and t = t' = 0 (ED vs atomic limit) across lattice
     shapes, boundary conditions, fillings, open and closed shells, and nonzero t' and mu.
+    The atomic limit is also checked at finite temperature (energy, double occupancy, free
+    energy, entropy) and at attractive U.
     """
     lattices = [
         SquareLattice(lx=2, ly=1, boundary_x="open"),
@@ -128,6 +130,34 @@ def standard_suite() -> list[HubbardModel]:
                 filling=Filling(n_up=n // 2 + 1, n_dn=n // 2 + 1),
             )
         )
+        # Finite temperature (ED's thermal path vs the canonical atomic limit), including
+        # attractive U and over-half filling. Small lattices only: ED needs the full spectrum.
+        if n <= 6:
+            thermal_fillings = sorted(f for f in fillings if min(f) >= 0)
+            thermal_fillings.append((n // 2 + 1, n // 2 + 1))
+            for nu, nd in thermal_fillings:
+                for temperature, U in ((0.3, 6.0), (2.0, 6.0), (0.5, -3.0)):
+                    models.append(
+                        HubbardModel(
+                            name=f"atomic T={temperature} U={U:g} {lat.lx}x{lat.ly} ({nu},{nd})",
+                            lattice=lat,
+                            t=0.0,
+                            U=U,
+                            mu=0.2,
+                            temperature=temperature,
+                            filling=Filling(n_up=nu, n_dn=nd),
+                        )
+                    )
+            # attractive U at T = 0: ground state maximizes double occupancy
+            models.append(
+                HubbardModel(
+                    name=f"atomic T=0 U=-3 {lat.lx}x{lat.ly}",
+                    lattice=lat,
+                    t=0.0,
+                    U=-3.0,
+                    filling=Filling(n_up=n // 2, n_dn=max(n // 2 - 1, 0)),
+                )
+            )
     return models
 
 
