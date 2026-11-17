@@ -20,7 +20,7 @@ import scipy.sparse as sp
 from scipy.sparse.linalg import LinearOperator, eigsh
 
 from superconductor.model import HubbardModel
-from superconductor.solvers.base import Observable, Solver, standard_observables
+from superconductor.solvers.base import CostEstimate, Observable, Solver, standard_observables
 
 DENSE_LIMIT = 4096  # use dense diagonalization at or below this sector dimension
 MAX_DIMENSION = 2_000_000
@@ -28,6 +28,19 @@ FINITE_T_LIMIT = 6000  # finite T needs the full spectrum
 _DEGENERACY_RTOL = 1e-9
 _RESIDUAL_TOL = 1e-7
 MAX_DEGENERACY = 256
+
+# Cost model constants, single core. Calibrated with benchmarks/ed_cost.py on a 4-core cloud
+# container (OpenBLAS 0.3.34, Haswell kernels, one thread). Re-run that script with --fit on
+# other hardware; with --check it verifies predictions are within a factor of 3.
+COST = {
+    "base_seconds": 0.02,  # imports, setup, small-matrix overheads
+    "build_seconds_per_nnz": 4e-8,  # assembling the sparse Hamiltonian
+    "dense_seconds_per_dim3": 1.45e-10,  # LAPACK eigh, O(D^3)
+    "dense_bytes_per_dim2": 40.0,  # about five D x D float64 arrays at peak
+    "lanczos_seconds_per_nnz": 2.0e-6,  # matrix-vector products over all Lanczos passes
+    "sparse_bytes_per_nnz": 40.0,  # CSR matrix plus construction temporaries at peak
+    "lanczos_bytes_per_dim": 400.0,  # Krylov and deflation vectors
+}
 
 
 def species_basis(num_sites: int, n: int) -> np.ndarray:
@@ -54,6 +67,37 @@ def kinetic_matrix(h: np.ndarray, basis: np.ndarray) -> sp.csr_matrix:
             vals.append(sign * amp)
     dim = len(basis)
     return sp.csr_matrix((vals, (rows, cols)), shape=(dim, dim))
+
+
+def estimated_nonzeros(model: HubbardModel) -> int:
+    """Number of non-zero entries of the sector Hamiltonian, counted without building it.
+
+    Off-diagonal: a hop i <- j of one spin species with n particles on N sites is possible
+    from exactly C(N - 2, n - 1) basis states of that species (j occupied, i empty, the other
+    n - 1 particles anywhere else). Each such entry appears once for every basis state of
+    the other species. Summed over the P directed hopping pairs (i, j) with h_ij != 0:
+
+        P * [C(N-2, n_up-1) * D_dn + C(N-2, n_dn-1) * D_up].
+
+    Diagonal: U * d - mu * (N_up + N_dn) for a state with d doubly occupied sites, which is
+    zero (and not stored) for some d; the number of states with each d is known exactly.
+    """
+    from superconductor.solvers.exact_limits import double_occupancy_degeneracies
+
+    n = model.num_sites
+    nu, nd = model.filling.n_up, model.filling.n_dn
+    h = model.hopping_matrix()
+    pairs = int(np.count_nonzero(h - np.diag(np.diag(h))))
+
+    def hops(k: int) -> int:
+        return comb(n - 2, k - 1) if n >= 2 and k >= 1 else 0
+
+    off_diagonal = pairs * (hops(nu) * comb(n, nd) + hops(nd) * comb(n, nu))
+    shift = model.mu * (nu + nd)
+    diagonal = sum(
+        g for d, g in double_occupancy_degeneracies(n, nu, nd).items() if model.U * d - shift != 0.0
+    )
+    return int(off_diagonal + diagonal)
 
 
 def sector_dimension(model: HubbardModel) -> int:
@@ -97,6 +141,61 @@ class ExactDiagonalization(Solver):
         if model.temperature > 0 and dim > FINITE_T_LIMIT:
             return f"finite temperature needs full spectrum; dimension {dim} > {FINITE_T_LIMIT}"
         return None
+
+    def estimate(self, model: HubbardModel) -> CostEstimate:
+        """Predict single-core time and peak memory from the sector size and sparsity.
+
+        Mirrors the paths ``solve`` takes: a diagonal Hamiltonian (no hopping) is trivial;
+        finite temperature and small sectors use dense diagonalization, O(D^3) time and
+        O(D^2) memory; larger sectors use Lanczos, roughly linear in the number of non-zeros.
+        Lanczos time grows with the ground-state degeneracy (one extra pass per degenerate
+        state), which isn't known in advance; the constant assumes the typical case.
+        """
+        reason = self.applicability(model)
+        dim = sector_dimension(model)
+        nnz = estimated_nonzeros(model)
+        c = COST
+        build = c["build_seconds_per_nnz"] * nnz
+        sparse_mem = c["sparse_bytes_per_nnz"] * nnz
+        diagonal = model.t == 0.0 and model.t_prime == 0.0
+        if model.temperature > 0:
+            method = "dense (full spectrum, needed for finite temperature)"
+            seconds = c["base_seconds"] + build + c["dense_seconds_per_dim3"] * dim**3
+            memory = sparse_mem + c["dense_bytes_per_dim2"] * dim**2
+        elif diagonal:
+            # The ground manifold is stored as dim x degeneracy unit vectors (twice, briefly),
+            # and with no hopping its size is known exactly from the double-occupancy count.
+            from superconductor.solvers.exact_limits import double_occupancy_degeneracies
+
+            g = double_occupancy_degeneracies(
+                model.num_sites, model.filling.n_up, model.filling.n_dn
+            )
+            if model.U > 0:
+                degeneracy = g[min(g)]
+            elif model.U < 0:
+                degeneracy = g[max(g)]
+            else:
+                degeneracy = dim
+            method = f"diagonal (no hopping; {degeneracy:,} lowest-energy states)"
+            seconds = c["base_seconds"] + build + 1e-8 * dim * degeneracy
+            memory = sparse_mem + 16.0 * dim * degeneracy
+        elif dim <= self.dense_limit:
+            method = "dense"
+            seconds = c["base_seconds"] + build + c["dense_seconds_per_dim3"] * dim**3
+            memory = sparse_mem + c["dense_bytes_per_dim2"] * dim**2
+        else:
+            method = "Lanczos (sparse)"
+            seconds = c["base_seconds"] + build + c["lanczos_seconds_per_nnz"] * nnz
+            memory = sparse_mem + c["lanczos_bytes_per_dim"] * dim
+        return CostEstimate(
+            solver=self.name,
+            feasible=reason is None,
+            seconds=float(seconds),
+            memory_bytes=float(memory),
+            driver=f"sector dimension {dim:,}, {method}",
+            reason=reason,
+            details={"sector_dimension": dim, "estimated_nonzeros": nnz, "method": method},
+        )
 
     def _solve(self, model: HubbardModel) -> tuple[dict[str, Observable], dict[str, Any]]:
         ham, double = build_hamiltonian(model)

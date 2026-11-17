@@ -77,7 +77,10 @@ provide the pieces needed for the first round, which uses ED/DQMC numerics as hi
 - 🟡 Automatic sanity checks on every result (`superconductor.validation.sanity`): double
   occupancy bounds, energy consistency, rigorous free-fermion energy bounds.
   Next: sum rules, symmetries, causality/Kramers–Kronig, known limits
-- ⬜ Cost estimates before running (Hilbert-space size, sign-problem severity, GPU-hours)
+- 🟡 Cost estimates before running: `Solver.estimate` and `superconductor estimate`, with
+  budget warnings in `solve` and `submit`. Done for ED (calibrated, checked by
+  `benchmarks/ed_cost.py`) and the exact limits; next: sign-problem severity and GPU-hours
+  for future Monte Carlo and tensor-network solvers
 - ⬜ Derivation checker (symbolic algebra, diagram rules, limits)
 - ⬜ Theory registry: mechanisms written as executable predictions, scored against layer 6
 

@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 
 from superconductor.model import HubbardModel
-from superconductor.solvers.base import Observable, Solver, standard_observables
+from superconductor.solvers.base import CostEstimate, Observable, Solver, standard_observables
 
 _SHELL_TOL = 1e-9
 
@@ -99,6 +99,22 @@ class FreeFermions(Solver):
             return "requires U = 0"
         return None
 
+    def estimate(self, model: HubbardModel) -> CostEstimate:
+        """An N x N eigenproblem, plus O(N^2) small array operations per species at T > 0."""
+        n = model.num_sites
+        seconds = 0.02 + 2e-10 * n**3
+        if model.temperature > 0:
+            seconds += 2 * 3e-6 * n**2
+        return CostEstimate(
+            solver=self.name,
+            feasible=self.applicability(model) is None,
+            seconds=seconds,
+            memory_bytes=40.0 * n**2 + 1e5,
+            driver=f"single-particle problem on {n} sites",
+            reason=self.applicability(model),
+            details={"sites": n},
+        )
+
     def _solve(self, model: HubbardModel) -> tuple[dict[str, Observable], dict[str, Any]]:
         eps, phi = np.linalg.eigh(model.hopping_matrix())
         shift = -model.mu * model.filling.total
@@ -176,6 +192,19 @@ class AtomicLimit(Solver):
         if model.t != 0.0 or model.t_prime != 0.0:
             return "requires t = t' = 0"
         return None
+
+    def estimate(self, model: HubbardModel) -> CostEstimate:
+        """A sum over at most min(N_up, N_dn) + 1 double-occupancy counts: negligible."""
+        terms = min(model.filling.n_up, model.filling.n_dn) + 1
+        return CostEstimate(
+            solver=self.name,
+            feasible=self.applicability(model) is None,
+            seconds=0.02 + 1e-6 * terms,
+            memory_bytes=1e5,
+            driver=f"closed-form sum over {terms} terms",
+            reason=self.applicability(model),
+            details={"terms": terms},
+        )
 
     def _solve(self, model: HubbardModel) -> tuple[dict[str, Observable], dict[str, Any]]:
         f = model.filling

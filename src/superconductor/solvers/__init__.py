@@ -6,6 +6,7 @@ networks), NetKet (neural-network quantum states), and a diagrammatic Monte Carl
 """
 
 from superconductor.solvers.base import (
+    CostEstimate,
     NotApplicableError,
     Observable,
     Result,
@@ -41,6 +42,7 @@ def list_solvers() -> list[str]:
 
 __all__ = [
     "AtomicLimit",
+    "CostEstimate",
     "ExactDiagonalization",
     "FreeFermions",
     "NotApplicableError",
