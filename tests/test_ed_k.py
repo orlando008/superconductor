@@ -196,7 +196,8 @@ def test_checkpoints_resume_without_recomputing(tmp_path, monkeypatch):
     m = model(SquareLattice(lx=3, ly=2), 3, 3)
     first = MomentumED(checkpoint_dir=tmp_path).solve(m)
     files = list(tmp_path.glob("ed-k-*/sector_*.json"))
-    assert len(files) == len(OrbitBasis(m).sectors())
+    # One checkpoint per sector actually solved (one per point-group family).
+    assert len(files) == first.metadata["sectors_solved"]
 
     def must_not_run(*args, **kwargs):
         raise AssertionError("a checkpointed sector was recomputed")
@@ -231,3 +232,48 @@ def test_shared_structure_is_frozen_and_never_modified():
         op @ np.ones(op.shape[0], dtype=op.dtype)
         op.explicit()
     assert np.array_equal(basis.cols, before)
+
+
+@pytest.mark.parametrize(
+    "lattice,filling",
+    [
+        (SquareLattice(lx=4, ly=4), (2, 2)),  # full C4v: momentum families of up to 4
+        (SquareLattice(lx=4, ly=4), (2, 1)),  # no spin flip
+        (SquareLattice(lx=4, ly=2), (3, 3)),  # rectangular: reflections only
+        (SquareLattice(lx=3, ly=3), (2, 2)),
+    ],
+)
+def test_point_group_family_blocks_have_identical_spectra(lattice, filling):
+    """The justification for solving one sector per family: every block in a family has the
+    same full spectrum, which is checked here by computing them all."""
+    from superconductor.solvers.ed_k import momentum_family
+
+    basis = OrbitBasis(model(lattice, *filling))
+    spectra = {}
+    for s in basis.sectors():
+        ham, _ = basis.block(s)
+        spectra[s] = np.linalg.eigvalsh(ham.toarray()) if ham.shape[0] else np.zeros(0)
+    for s, spec in spectra.items():
+        for mx, my in momentum_family(s[0], s[1], lattice.lx, lattice.ly):
+            other = spectra[(mx, my, s[2])]
+            assert len(other) == len(spec) and np.allclose(other, spec, atol=1e-10), (s, (mx, my))
+
+
+@pytest.mark.parametrize(
+    "lattice,filling",
+    [
+        (SquareLattice(lx=4, ly=4), (2, 2)),
+        (SquareLattice(lx=3, ly=3), (3, 2)),
+        (SquareLattice(lx=4, ly=2), (3, 3)),
+    ],
+)
+def test_point_group_shortcut_gives_identical_results(lattice, filling):
+    m = model(lattice, *filling)
+    a, b = MomentumED(point_group=True).solve(m), MomentumED(point_group=False).solve(m)
+    # Equal up to rounding: the two runs diagonalize different (equivalent) sectors.
+    assert a["energy"] == pytest.approx(b["energy"], abs=1e-12)
+    assert a["double_occupancy"] == pytest.approx(b["double_occupancy"], abs=1e-12)
+    assert a.metadata["ground_state_degeneracy"] == b.metadata["ground_state_degeneracy"]
+    assert a.metadata["ground_momenta"] == b.metadata["ground_momenta"]
+    assert a.metadata["sectors_inferred_by_point_group"] > 0
+    assert b.metadata["sectors_inferred_by_point_group"] == 0

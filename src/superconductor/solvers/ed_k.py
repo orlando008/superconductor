@@ -429,6 +429,26 @@ def _sector_ground_manifold(op: SectorOperator, dense_limit: int):
     raise RuntimeError(f"ground-state degeneracy exceeds {MAX_DEGENERACY}")
 
 
+def momentum_family(mx: int, my: int, lx: int, ly: int) -> frozenset[tuple[int, int]]:
+    """Momenta related to (mx, my) by the lattice's point-group symmetries.
+
+    Reflections x -> -x and y -> -y are symmetries of every periodic Lx x Ly lattice (with
+    nearest- and diagonal-neighbour hopping). On a square lattice (Lx = Ly), swapping x and y
+    is too, which together with the reflections generates the full C4v. A symmetry R maps the
+    block at momentum K onto the block at R K unitarily, so their spectra and ground-state
+    observables are identical. The spin-flip parity is unchanged, because spin flip commutes
+    with every lattice symmetry.
+    """
+    family = set()
+    for sx in (1, -1):
+        for sy in (1, -1):
+            a, b = (sx * mx) % lx, (sy * my) % ly
+            family.add((a, b))
+            if lx == ly:
+                family.add((b, a))
+    return frozenset(family)
+
+
 _SHARED: dict[str, Any] = {}  # basis shared with forked worker processes (copy-on-write)
 
 
@@ -476,8 +496,12 @@ class MomentumED(Solver):
         workers: int | None = None,
         spin_flip: bool = True,
         checkpoint_dir: str | os.PathLike | None = None,
+        point_group: bool = True,
     ):
         self.dense_limit = dense_limit
+        # Solve one sector per point-group family and copy its result to the others. It isn't
+        # a recorded setting: it changes which sectors are computed, never the results.
+        self.point_group = point_group
         if workers is None:  # e.g. for `superconductor submit`, which builds solvers by name
             workers = int(os.environ.get("SUPERCONDUCTOR_WORKERS", "1"))
         self.workers = max(1, workers)
@@ -564,7 +588,23 @@ class MomentumED(Solver):
                 path = ckpt / f"sector_{s[0]}_{s[1]}_{s[2]}.json"
                 if path.exists():
                     done[s] = json.loads(path.read_text())["summary"]
-        todo = [s for s in sectors if s not in done]
+        # Group sectors into point-group families; each family is solved once, preferring a
+        # member that's already checkpointed.
+        families: dict[tuple, list] = {}
+        for s in sectors:
+            if self.point_group:
+                fam = momentum_family(s[0], s[1], basis.lx, basis.ly)
+                key = (min(fam), s[2])
+            else:
+                key = s
+            families.setdefault(key, []).append(s)
+        solver_for = {}
+        for members in families.values():
+            have = [m for m in members if m in done]
+            chosen = have[0] if have else members[0]
+            for m in members:
+                solver_for[m] = chosen
+        todo = sorted({c for c in solver_for.values() if c not in done})
         _SHARED.update(basis=basis, dense_limit=self.dense_limit, checkpoint=ckpt)
         try:
             if self.workers > 1 and len(todo) > 1:
@@ -578,7 +618,13 @@ class MomentumED(Solver):
                 fresh = [_solve_sector(s) for s in todo]
         finally:
             _SHARED.clear()
-        summaries = [b for b in list(done.values()) + fresh if b is not None]
+        solved = dict(done)
+        solved.update(zip(todo, fresh, strict=True))
+        summaries = []
+        for s in sectors:
+            source = solved[solver_for[s]]
+            if source is not None:
+                summaries.append([list(s)] + source[1:])
         e0 = min(b[1] for b in summaries)
         tol = _DEGENERACY_RTOL * max(1.0, abs(e0))
         ground = [b for b in summaries if b[1] <= e0 + tol]
@@ -598,6 +644,8 @@ class MomentumED(Solver):
             "ground_momenta": sorted({(int(b[0][0]), int(b[0][1])) for b in ground}),
             "ground_sectors": [list(map(int, b[0])) for b in ground],
             "ground_state_degeneracy": int(count),
+            "sectors_solved": len({solver_for[s] for s in sectors}),
+            "sectors_inferred_by_point_group": len(sectors) - len({solver_for[s] for s in sectors}),
             "max_residual": max(b[5] for b in ground),
             "method": "symmetry blocks"
             + (" (momentum, spin flip)" if basis.spin_flip else " (momentum)"),
