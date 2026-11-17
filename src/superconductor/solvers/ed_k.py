@@ -296,8 +296,19 @@ class SectorOperator:
     def __init__(self, basis: OrbitBasis, sector: tuple[int, int, int]):
         self.basis = basis
         chi = basis.characters(sector)
-        compat = np.where(basis.stab, chi[None, :] * basis.stab_sign, 1.0)
-        self.allowed = np.all(np.abs(compat - 1.0) < 1e-9, axis=1)
+        # A representative is allowed if chi(g) sigma_g = 1 for every g in its stabilizer.
+        # Checked one element at a time with boolean arrays: building the full complex
+        # (representatives x elements) table took about 5 GB at 4x4 half filling, and
+        # got a worker killed for running out of memory.
+        self.allowed = np.ones(basis.n_reps, dtype=bool)
+        for g in range(len(chi)):
+            fixed = basis.stab[:, g]
+            if not fixed.any():
+                continue
+            ok_plus = abs(chi[g] - 1.0) < 1e-9  # chi(g) sigma = 1 with sigma = +1
+            ok_minus = abs(chi[g] + 1.0) < 1e-9  # ... or with sigma = -1
+            sign_plus = basis.stab_sign[:, g] > 0
+            self.allowed &= ~fixed | np.where(sign_plus, ok_plus, ok_minus)
         self.allowed_indices = np.flatnonzero(self.allowed)
         self.real = bool(np.allclose(chi.imag, 0.0))
         self.dtype = np.float64 if self.real else np.complex128
