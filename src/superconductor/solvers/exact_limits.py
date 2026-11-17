@@ -36,31 +36,100 @@ def ground_occupations(eps: np.ndarray, n: int) -> np.ndarray:
     return w
 
 
+def log_elementary_symmetric(log_x: np.ndarray, n_max: int) -> np.ndarray:
+    """log e_k(x_1, ..., x_M) for k = 0..n_max, computed in log space.
+
+    e_k is the k-th elementary symmetric polynomial: the sum over all k-element subsets of
+    the product of their x values. With x_j = exp(-beta eps_j), e_N is exactly the canonical
+    partition function of N non-interacting fermions in levels eps_j (each level holds 0 or 1
+    fermion, so each N-fermion state is an N-element subset of levels).
+
+    It uses the recursion e_k <- e_k + x_j e_{k-1}, adding one level at a time. Every term
+    is positive, so there is no cancellation; the alternating Newton-identity recursion
+    Z_N = (1/N) sum_k (-1)^{k+1} z(k beta) Z_{N-k} loses all precision at low temperature.
+    Working with logarithms (logaddexp) also rules out overflow and underflow at any T.
+    """
+    out = np.full(n_max + 1, -np.inf)
+    out[0] = 0.0
+    for lx in log_x:
+        out[1:] = np.logaddexp(out[1:], lx + out[:-1])
+    return out
+
+
+def canonical_occupations(eps: np.ndarray, n: int, beta: float) -> tuple[np.ndarray, float]:
+    """Thermal occupation <n_j> of each level, and ln Z_N, for exactly ``n`` free fermions.
+
+    <n_j> = x_j * Z_{N-1}(all levels except j) / Z_N(all levels): the states in which level
+    j is filled are the (N-1)-subsets of the other levels, times x_j.
+    """
+    log_x = -beta * eps
+    log_z = log_elementary_symmetric(log_x, n)[n]
+    occ = np.zeros_like(eps)
+    if n == 0:
+        return occ, 0.0
+    for j in range(len(eps)):
+        others = np.delete(log_x, j)
+        log_z_without_j = log_elementary_symmetric(others, n - 1)[n - 1]
+        occ[j] = np.exp(log_x[j] + log_z_without_j - log_z)
+    return occ, float(log_z)
+
+
 class FreeFermions(Solver):
-    """U = 0: diagonalize the single-particle hopping matrix and fill levels."""
+    """U = 0: exact solution from the single-particle levels of the hopping matrix.
+
+    Ground state: fill the lowest levels (a partially filled degenerate shell is filled
+    uniformly, the T -> 0+ average over the degenerate ground manifold).
+
+    Finite temperature, canonical ensemble (fixed N_up and N_dn, as in ED): each spin species
+    is an independent system of non-interacting fermions with partition function
+    Z_s = e_{N_s}(exp(-beta eps)) (see ``log_elementary_symmetric``), so
+
+        F = -T (ln Z_up + ln Z_dn) - mu N,   E = sum_s sum_j eps_j <n_j>_s - mu N,
+        S = (E - F) / T,   <n_i,up n_i,dn> = <n_i,up> <n_i,dn>,
+
+    the last because the two species are independent. Site densities follow from level
+    occupations through the eigenvectors: <n_i,s> = sum_j |phi_ij|^2 <n_j>_s.
+    """
 
     name = "free"
+    version = "0.2.0"
 
     def applicability(self, model: HubbardModel) -> str | None:
         if model.U != 0.0:
             return "requires U = 0"
-        if model.temperature != 0.0:
-            return "canonical finite-temperature free fermions not implemented yet"
         return None
 
     def _solve(self, model: HubbardModel) -> tuple[dict[str, Observable], dict[str, Any]]:
         eps, phi = np.linalg.eigh(model.hopping_matrix())
-        energy = -model.mu * model.filling.total
+        shift = -model.mu * model.filling.total
+        energy = shift
         densities = []
-        open_shell = False
+        metadata: dict[str, Any] = {"single_particle_levels": eps.tolist()}
+
+        if model.temperature == 0.0:
+            open_shell = False
+            for n in (model.filling.n_up, model.filling.n_dn):
+                w = ground_occupations(eps, n)
+                open_shell |= bool(np.any((w > 0) & (w < 1)))
+                energy += float(w @ eps)
+                densities.append((phi**2) @ w)  # <n_i> for this species
+            metadata["open_shell"] = open_shell
+            d_total = float(densities[0] @ densities[1])
+            return standard_observables(model, energy, d_total), metadata
+
+        beta = 1.0 / model.temperature
+        log_z_total = 0.0
         for n in (model.filling.n_up, model.filling.n_dn):
-            w = ground_occupations(eps, n)
-            open_shell |= bool(np.any((w > 0) & (w < 1)))
+            w, log_z = canonical_occupations(eps, n, beta)
             energy += float(w @ eps)
-            densities.append((phi**2) @ w)  # <n_i> for this species
+            log_z_total += log_z
+            densities.append((phi**2) @ w)
         d_total = float(densities[0] @ densities[1])
-        metadata = {"single_particle_levels": eps.tolist(), "open_shell": open_shell}
-        return standard_observables(model, energy, d_total), metadata
+        free_energy = shift - log_z_total / beta
+        observables = standard_observables(model, energy, d_total)
+        observables["free_energy"] = Observable(free_energy)
+        observables["entropy"] = Observable(beta * (energy - free_energy))
+        return observables, metadata
 
 
 def double_occupancy_degeneracies(num_sites: int, n_up: int, n_dn: int) -> dict[int, int]:

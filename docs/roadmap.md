@@ -36,9 +36,9 @@ Implemented in `superconductor.solvers` and `superconductor.validation`.
 - ✅ `Solver` interface: `applicability()` (with reasons) + `solve()` returning a `Result`
   with named observables, error bars, solver version and model fingerprint
 - ✅ Exact diagonalization: dense, Lanczos with degenerate-manifold verification, finite T
-- ✅ Exact limits: free fermions (U = 0), atomic limit (t = 0; any U, ground state and
-  canonical finite temperature)
-- ✅ Pairwise cross-validation of all applicable solvers; standard suite of 87 models
+- ✅ Exact limits: free fermions (U = 0) and atomic limit (t = 0, any U), both at zero and
+  finite temperature (canonical ensemble)
+- ✅ Pairwise cross-validation of all applicable solvers; standard suite of 119 models
   (including finite temperature)
 - ⬜ ED with symmetry sectors (momentum, point group, total S) for 16 to 20 site clusters
 - ⬜ More exact references: Bethe ansatz (1D Lieb–Wu), high-T series expansion, 2nd-order
