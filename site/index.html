@@ -183,6 +183,7 @@ svg [data-tip] { cursor: default; }
 .methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .method { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
 .method h3 { font-size: 1.05rem; }
+.method .tech { font-family: var(--font-display); font-size: 0.82rem; color: var(--muted); margin-top: -4px; }
 .method dl { margin: 0; display: grid; gap: 6px; font-size: 0.95rem; }
 .method dt { font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .method dd { margin: 0; }
@@ -397,67 +398,75 @@ footer a { color: var(--ink-2); }
   <div class="wrap">
     <div class="prose">
       <span class="label">Checking</span>
-      <h2>Every method is blind somewhere. Use them to check each other.</h2>
-      <p>Because exact answers are out of reach for large grids, physicists use approximate methods. Each one fails in a different place, so a single result can never tell you whether you are seeing physics or a flaw in the method.</p>
+      <h2>No method works everywhere, so we make them check each other's work</h2>
+      <p>Think about measuring distances. A tape measure is exact, but only across a room. A laser rangefinder reaches across a field, but can be fooled by bright sunlight. GPS works anywhere, but is only accurate to a few metres. None of them is right everywhere. Where their ranges overlap, though, they should give the same reading. If they don't, one of them is broken.</p>
+      <p>Calculating how electrons behave works the same way. Exact answers are impossible for anything but tiny grids, so scientists use a range of shortcut methods. Each one is trustworthy in some situations and unreliable in others. A single method's answer can't tell you whether you are seeing real physics or the method failing.</p>
     </div>
     <div class="methods">
       <article class="method">
-        <h3>Exact diagonalization</h3>
-        <dl><dt>Good at</dt><dd>Perfect answers to test everything else against</dd><dt>Blind spot</dt><dd>Only tiny grids, about 20 sites</dd></dl>
+        <h3>The perfect calculator</h3>
+        <span class="tech">Exact diagonalization</span>
+        <dl><dt>Works well</dt><dd>Checks every possible arrangement of electrons, so its answers are exact.</dd><dt>Breaks down</dt><dd>Only on tiny grids of about 20 sites. Beyond that there are too many arrangements to check.</dd></dl>
       </article>
       <article class="method">
-        <h3>Quantum Monte Carlo</h3>
-        <dl><dt>Good at</dt><dd>Unbiased results on larger grids at finite temperature</dd><dt>Blind spot</dt><dd>The "sign problem" makes it explode exactly where electrons are removed</dd></dl>
+        <h3>The random sampler</h3>
+        <span class="tech">Quantum Monte Carlo</span>
+        <dl><dt>Works well</dt><dd>Like an opinion poll: samples huge numbers of arrangements at random instead of checking them all, so it handles bigger grids.</dd><dt>Breaks down</dt><dd>Once electrons are removed, which is exactly where superconductivity happens, the samples become so noisy that it would need impossibly many.</dd></dl>
       </article>
       <article class="method">
-        <h3>DMRG and tensor networks</h3>
-        <dl><dt>Good at</dt><dd>Lowest-energy states of long strips</dd><dt>Blind spot</dt><dd>Stretching strip results to a true 2D plane</dd></dl>
+        <h3>The strip specialist</h3>
+        <span class="tech">DMRG and tensor networks</span>
+        <dl><dt>Works well</dt><dd>Very accurate on long, thin strips of the grid.</dd><dt>Breaks down</dt><dd>The real material is a wide, flat sheet. Getting from strips to a full sheet involves some guesswork.</dd></dl>
       </article>
       <article class="method">
-        <h3>Dynamical mean-field theory</h3>
-        <dl><dt>Good at</dt><dd>Local effects and real-material spectra</dd><dt>Blind spot</dt><dd>Misses longer-range correlations</dd></dl>
+        <h3>The zoom lens</h3>
+        <span class="tech">Dynamical mean-field theory</span>
+        <dl><dt>Works well</dt><dd>Studies one site or a small patch in great detail, treating everything around it as a blurred average.</dd><dt>Breaks down</dt><dd>Misses patterns that stretch across many sites.</dd></dl>
       </article>
       <article class="method">
-        <h3>Neural-network states</h3>
-        <dl><dt>Good at</dt><dd>Rapidly improving accuracy</dd><dt>Blind spot</dt><dd>Hard to verify the optimization worked</dd></dl>
+        <h3>The AI approach</h3>
+        <span class="tech">Neural-network quantum states</span>
+        <dl><dt>Works well</dt><dd>A neural network learns to describe the electrons. Its accuracy is improving fast.</dd><dt>Breaks down</dt><dd>It's hard to tell whether the network found the best answer or got stuck on a worse one.</dd></dl>
       </article>
       <article class="method">
-        <h3>Diagrammatic Monte Carlo</h3>
-        <dl><dt>Good at</dt><dd>Controlled results for infinite systems</dd><dt>Blind spot</dt><dd>Struggles when repulsion is strong</dd></dl>
+        <h3>The step-by-step builder</h3>
+        <span class="tech">Diagrammatic Monte Carlo</span>
+        <dl><dt>Works well</dt><dd>Builds the answer up in pieces from a simple starting point, and can describe an infinitely large grid.</dd><dt>Breaks down</dt><dd>When electrons repel strongly, the pieces stop adding up to a reliable answer.</dd></dl>
       </article>
     </div>
     <figure>
       <div class="chart-box diagram-box">
         <svg viewBox="0 0 760 290" role="img" aria-labelledby="xc-title xc-desc">
           <title id="xc-title">How cross-checking works</title>
-          <desc id="xc-desc">Two overlapping regions show where method A and method B are reliable. In the overlap, both must give the same answer. If they agree, confidence grows. If they disagree, it is either a bug or real physics, and it gets investigated.</desc>
+          <desc id="xc-desc">Two overlapping regions show where method A and method B work well. Where they overlap, both should give the same answer. If they agree, confidence grows. If they disagree, something is wrong or new, and it gets investigated.</desc>
           <ellipse cx="250" cy="140" rx="190" ry="110" class="bg-fill" style="stroke: var(--spin-up); stroke-width: 2.5"/>
           <ellipse cx="420" cy="140" rx="190" ry="110" style="fill: none; stroke: var(--spin-dn); stroke-width: 2.5"/>
-          <text x="140" y="96" class="t-strong" font-size="17">Method A</text>
-          <text x="140" y="118" font-size="14">reliable here</text>
+          <text x="125" y="96" class="t-strong" font-size="17">Method A</text>
+          <text x="125" y="118" font-size="14">works well here</text>
           <text x="470" y="96" class="t-strong" font-size="17">Method B</text>
-          <text x="470" y="118" font-size="14">reliable here</text>
-          <text x="335" y="142" text-anchor="middle" class="t-strong" font-size="15">Both must</text>
-          <text x="335" y="162" text-anchor="middle" class="t-strong" font-size="15">agree here</text>
-          <path d="M610 112 L652 82" class="ink-stroke"/>
-          <path d="M610 168 L652 198" class="ink-stroke"/>
-          <circle cx="672" cy="70" r="15" style="fill: var(--good)"/>
-          <path d="M665 70 L670 75 L680 64" style="stroke: var(--surface); stroke-width: 2.5; fill: none"/>
-          <text x="696" y="66" class="t-strong" font-size="14">Agree</text>
-          <text x="696" y="84" font-size="13">trust grows</text>
-          <circle cx="672" cy="210" r="15" class="accent-fill"/>
-          <text x="672" y="216" text-anchor="middle" font-size="17" style="fill: var(--on-accent); font-weight: 800">!</text>
-          <text x="696" y="206" class="t-strong" font-size="14">Disagree</text>
-          <text x="696" y="224" font-size="13">bug or physics?</text>
-          <text x="40" y="276" class="t-muted" font-size="13">Small grids, high temperature, weak repulsion and other special cases are where methods overlap.</text>
+          <text x="470" y="118" font-size="14">works well here</text>
+          <text x="335" y="142" text-anchor="middle" class="t-strong" font-size="15">Both should give</text>
+          <text x="335" y="162" text-anchor="middle" class="t-strong" font-size="15">the same answer</text>
+          <path d="M612 112 L638 84" class="ink-stroke"/>
+          <path d="M612 168 L638 196" class="ink-stroke"/>
+          <circle cx="654" cy="70" r="15" style="fill: var(--good)"/>
+          <path d="M647 70 L652 75 L662 64" style="stroke: var(--surface); stroke-width: 2.5; fill: none"/>
+          <text x="678" y="66" class="t-strong" font-size="14">Agree</text>
+          <text x="678" y="84" font-size="13">trust grows</text>
+          <circle cx="654" cy="210" r="15" class="accent-fill"/>
+          <text x="654" y="216" text-anchor="middle" font-size="17" style="fill: var(--on-accent); font-weight: 800">!</text>
+          <text x="678" y="206" class="t-strong" font-size="14">Disagree</text>
+          <text x="678" y="224" font-size="13">investigate</text>
+          <text x="40" y="276" class="t-muted" font-size="13">Methods overlap in special cases: tiny grids, very high temperatures, or electrons that barely repel.</text>
         </svg>
       </div>
+      <figcaption>A disagreement means one of two things: a mistake in one of the methods, or something new about the physics. Either way, it's worth knowing.</figcaption>
     </figure>
     <div class="story">
       <span class="label">It already happened</span>
-      <p>On the first day of building this platform, a standard, widely used maths routine reported the lowest energy of a test system as</p>
-      <p class="big">E = 6 &nbsp;(reported, with no warning)<br>E = 0 &nbsp;(the exact answer)</p>
-      <p>Its own error checks said everything was fine. The mistake was caught only because an independent method, built to agree in that special case, disagreed. That is the whole idea in one example.</p>
+      <p>On the first day of building this platform, a standard piece of maths software that scientists rely on every day got a test problem wrong:</p>
+      <p class="big">The software's answer: 6<br>The correct answer: &nbsp;&nbsp;&nbsp;0</p>
+      <p>It gave no warning, and its own internal checks said everything was fine. We caught the mistake only because a second, independent method, which has to agree on that test problem, gave a different answer. That is the whole idea in one example.</p>
     </div>
   </div>
 </section>
