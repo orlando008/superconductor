@@ -264,7 +264,7 @@ footer a { color: var(--ink-2); }
     <div class="hero-text">
       <span class="label">An open research platform</span>
       <h1>Why does copper oxide superconduct?</h1>
-      <p class="lede">Forty years after their discovery, nobody can fully explain why copper-oxide ceramics carry electricity with zero resistance at temperatures far above every other material known at ordinary pressure. We're building the shared instruments to settle it: simulations that check each other, results anyone can reproduce, and a public scoreboard for theories.</p>
+      <p class="lede">Forty years after they were discovered, nobody can fully explain why certain copper-based ceramics conduct electricity perfectly, losing no energy at all, at temperatures far warmer than any other material manages at normal pressure. We're building the shared tools to settle it: computer simulations that check each other's work, results anyone can rerun, and a public scoreboard for competing explanations.</p>
       <p class="challenge">An independent, community-built project working on <a href="https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/">Grand Challenge Problem 01: A Predictive Theory of Cuprate Superconductivity</a>, posed by Discovered Materials.</p>
       <div class="ctas">
         <a class="btn btn-primary" href="https://github.com/orlando008/superconductor">See the code on GitHub</a>
@@ -272,7 +272,7 @@ footer a { color: var(--ink-2); }
       </div>
       <div class="facts" aria-label="Key facts">
         <span><b>1986</b> cuprates discovered</span>
-        <span><b>133 K</b> record at normal pressure</span>
+        <span><b>−140 °C</b> warmest they work</span>
         <span><b>0</b> agreed explanations</span>
       </div>
     </div>
@@ -285,27 +285,27 @@ footer a { color: var(--ink-2); }
       <canvas id="lattice" role="img" aria-label="A 10 by 10 grid of copper sites with electrons hopping between them. Arrows show electrons with spin up and spin down; rings mark sites holding two electrons."></canvas>
       <div class="controls">
         <div class="control">
-          <label for="u">Repulsion between electrons (U)</label>
-          <output id="u-out" for="u">8 t</output>
+          <label for="u">How strongly electrons push each other away</label>
+          <output id="u-out" for="u">8 · strong</output>
           <input id="u" type="range" min="0" max="12" step="0.5" value="8">
         </div>
         <div class="control">
-          <label for="dop">Electrons removed (doping)</label>
+          <label for="dop">Share of electrons removed</label>
           <output id="dop-out" for="dop">0%</output>
           <input id="dop" type="range" min="0" max="30" step="1" value="0">
         </div>
       </div>
       <div class="meter-row">
-        <span>Hops that succeed</span>
+        <span>Moves that succeed</span>
         <div class="meter" aria-hidden="true"><span id="meter-fill"></span></div>
         <output id="meter-out">–</output>
       </div>
-      <p class="lab-read" id="lab-read" aria-live="polite">With one electron per site and strong repulsion, almost every hop is blocked. The grid is jammed: an insulator.</p>
+      <p class="lab-read" id="lab-read" aria-live="polite">One electron on every site, all pushing each other away hard: almost every move is blocked. The grid is jammed, so it can't conduct electricity. Now try removing some electrons.</p>
       <div class="lab-foot">
         <div class="legend">
-          <span><i class="sw sw-up"></i>Spin up</span>
-          <span><i class="sw sw-dn"></i>Spin down</span>
-          <span><i class="sw sw-dbl"></i>Two on one site (costs U)</span>
+          <span><i class="sw sw-up"></i>Electron, spin up</span>
+          <span><i class="sw sw-dn"></i>Electron, spin down</span>
+          <span><i class="sw sw-dbl"></i>Two crowded onto one site</span>
         </div>
         <button class="btn btn-ghost btn-small" id="play" type="button">Pause</button>
       </div>
@@ -318,27 +318,27 @@ footer a { color: var(--ink-2); }
     <div class="prose">
       <span class="label">The puzzle</span>
       <h2>Superconductors need extreme cold. Cuprates need much less.</h2>
-      <p>A superconductor loses all electrical resistance below a critical temperature, written T<sub>c</sub>. No energy is wasted as heat, which is why superconductors power MRI scanners, particle accelerators and maglev trains. The catch is cooling. Classic superconductors only work near absolute zero, which takes expensive liquid helium.</p>
-      <p>In 1986, copper-oxide ceramics (cuprates) broke that barrier. Within a few years they superconducted above the boiling point of liquid nitrogen, a coolant that costs less than milk. The theory that explains classic superconductors, from 1957, does not explain cuprates. Without the right theory, nobody can design the next material on purpose, including one that might work at room temperature.</p>
+      <p>A superconductor is a material that carries electricity with no resistance at all, so no energy is lost as heat. Superconductors already run MRI scanners, particle accelerators and maglev trains. The catch is that each one only works below a certain temperature. Classic superconductors need to be within a few degrees of absolute zero (−273 °C, the coldest anything can get), which takes expensive liquid helium.</p>
+      <p>In 1986, a family of copper-based ceramics called <b>cuprates</b> broke that barrier. Within a few years some worked above −196 °C, the temperature of liquid nitrogen, a coolant that costs less than milk. The accepted theory of superconductivity, from 1957, doesn't explain them. Without the right theory, nobody can design better materials on purpose, including one that might work at room temperature.</p>
     </div>
     <figure>
       <div class="chart-box">
         <div class="chart-legend" aria-hidden="true">
           <span><i class="sw sw-dn"></i>Classic superconductors</span>
-          <span><i class="sw sw-up"></i>Cuprates (copper oxides)</span>
+          <span><i class="sw sw-up"></i>Cuprates (copper-based ceramics)</span>
           <span><svg width="22" height="10" aria-hidden="true"><line x1="0" y1="5" x2="22" y2="5" class="ref"/></svg>Coolants and room temperature</span>
         </div>
         <svg id="chart-tc" viewBox="0 0 760 350" role="img" aria-labelledby="tc-title tc-desc">
-          <title id="tc-title">Highest superconducting temperature by material</title>
+          <title id="tc-title">Warmest temperature at which each material superconducts</title>
           <desc id="tc-desc">Bars for seven materials on a 0 to 300 kelvin scale. Classic superconductors reach at most 39 kelvin. Cuprates reach 38 to 133 kelvin, above liquid nitrogen at 77 kelvin. Room temperature is 293 kelvin.</desc>
         </svg>
       </div>
-      <figcaption>Highest T<sub>c</sub> at ordinary pressure, in kelvin (0 K is absolute zero; 293 K is room temperature). Hydrogen-rich compounds have superconducted near 250 K, but only when squeezed to pressures found deep inside the Earth.</figcaption>
+      <figcaption>The warmest temperature at which each material superconducts, at normal pressure. Scientists measure temperature in kelvin (K), which counts up from absolute zero: 0 K is −273 °C, liquid nitrogen is 77 K (−196 °C) and a room is about 293 K (20 °C). Some hydrogen-rich materials have superconducted near 250 K, but only when crushed to pressures like those deep inside the Earth.</figcaption>
       <details class="data">
         <summary>Show the numbers</summary>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Material</th><th>Family</th><th>Discovered</th><th>T<sub>c</sub> (K)</th></tr></thead>
+            <thead><tr><th>Material</th><th>Family</th><th>Discovered</th><th>Warmest working temperature (K)</th><th>(°C)</th></tr></thead>
             <tbody id="tc-table"></tbody>
           </table>
         </div>
@@ -351,9 +351,9 @@ footer a { color: var(--ink-2); }
   <div class="wrap">
     <div class="prose">
       <span class="label">Why it's hard</span>
-      <h2>The electrons act as a crowd, and crowds are expensive to compute</h2>
+      <h2>Electrons that behave like a crowd are very hard to calculate</h2>
       <p>In most materials each electron can be treated as if it moves on its own. In cuprates the electrons repel each other so strongly that they move as a collective, the way a packed crowd does. You cannot follow one person and understand the crowd.</p>
-      <p>Physicists simplify the material to its essential layer: a flat grid of copper atoms. Even then, each site can be empty, hold one electron spinning up or down, or hold two. Four possibilities per site means the number of arrangements multiplies by four with every site you add.</p>
+      <p>Physicists simplify the material to its most important layer: a flat grid of copper atoms. Even then, each spot on the grid (a "site") can be empty, hold one electron of either kind (the two kinds are called spin up and spin down), or hold two. With four possibilities per site, every site you add multiplies the number of possible arrangements by four.</p>
     </div>
     <figure>
       <div class="chart-box">
@@ -362,12 +362,12 @@ footer a { color: var(--ink-2); }
           <desc id="ex-desc">Bars on a logarithmic scale. A 2 by 2 grid has 256 arrangements, 4 by 4 has about 4.3 billion, 6 by 6 about 10 to the 21, 8 by 8 about 10 to the 38 and 10 by 10 about 10 to the 60, which is more than the number of atoms in the Earth.</desc>
         </svg>
       </div>
-      <figcaption>The vertical axis is logarithmic: each gridline is ten billion (10<sup>10</sup>) times the one below it. A real crystal has around 10<sup>23</sup> sites. Exact calculations top out at grids of about 20 sites, even with clever shortcuts, so everything bigger relies on approximations.</figcaption>
+      <figcaption>Each gridline is ten billion times bigger than the one below it. A real crystal has about a hundred thousand billion billion sites (10<sup>23</sup>). Exact calculations top out at about 20 sites, even with clever shortcuts, so anything bigger has to rely on approximations.</figcaption>
       <details class="data">
         <summary>Show the numbers</summary>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Grid</th><th>Sites</th><th>Arrangements (4<sup>sites</sup>)</th></tr></thead>
+            <thead><tr><th>Grid</th><th>Sites</th><th>Possible arrangements</th></tr></thead>
             <tbody id="ex-table"></tbody>
           </table>
         </div>
@@ -375,21 +375,21 @@ footer a { color: var(--ink-2); }
     </figure>
 
     <div class="prose">
-      <h3>The model: three knobs</h3>
-      <p>The standard simplification is the <b>Hubbard model</b>, the one in the grid at the top of this page. Electrons sit on a checkerboard of copper sites and do two things: they <b>hop</b> to neighbouring sites (how easily is set by <code>t</code>, and <code>t′</code> for diagonal hops), and they <b>repel</b> each other when two share a site (how strongly is set by <code>U</code>). The third knob is <b>doping</b>: how many electrons are removed.</p>
-      <p>With exactly one electron per site and strong repulsion, the electrons jam. Nobody can move without doubling up, so the material is an insulator. Remove a few electrons and they can move again. In real cuprates, superconductivity appears in a dome-shaped window of doping.</p>
+      <h3>The simplified picture: three dials</h3>
+      <p>The standard simplified picture is called the <b>Hubbard model</b>, and it's what the grid at the top of this page shows. Electrons sit on a checkerboard of copper sites and do two things: they <b>hop</b> to neighbouring sites, and they <b>push each other away</b> when two land on the same site. Three dials describe it: how easily electrons hop, how strongly they repel each other, and how many electrons have been removed, which scientists call <b>doping</b>.</p>
+      <p>With exactly one electron per site and strong repulsion, the electrons jam. None can move without crowding onto an occupied site, so the material can't conduct electricity at all: it's an insulator. Remove a few electrons and they can move again. In real cuprates, superconductivity appears only when the right share of electrons has been removed, and the pattern traces out a dome.</p>
     </div>
     <figure>
       <div class="chart-box">
         <svg id="chart-dome" viewBox="0 0 760 360" role="img" aria-labelledby="dome-title dome-desc">
-          <title id="dome-title">Superconducting temperature versus doping in cuprates</title>
-          <desc id="dome-desc">A dome-shaped curve. Superconductivity starts near 5 percent doping, peaks at 16 percent and ends near 27 percent. Below about 2 percent the material is an antiferromagnetic insulator.</desc>
+          <title id="dome-title">How superconductivity depends on the share of electrons removed</title>
+          <desc id="dome-desc">A dome-shaped curve. Superconductivity starts when about 5 percent of electrons are removed, works best at 16 percent and disappears near 27 percent. Below about 2 percent the material is an insulator.</desc>
         </svg>
       </div>
-      <figcaption>The dome follows the empirical relation T<sub>c</sub>/T<sub>c,max</sub> = 1 − 82.6 (p − 0.16)<sup>2</sup> (Presland, Tallon and co-workers, 1991), which describes many cuprates. The insulating region at low doping is shown schematically. Hover to read values.</figcaption>
+      <figcaption>Superconductivity works best when about 16% of electrons are removed. The curve is a formula that researchers (Presland, Tallon and co-workers, 1991) found fits many different cuprates. The insulating region on the left is sketched for illustration. Hover over the chart to read values.</figcaption>
     </figure>
     <div class="prose">
-      <p class="aside">The big open question: does this simple model produce superconductivity by itself, or are ingredients missing? Large computations in recent years give different answers depending on the method and the value of <code>t′</code>. Settling questions like this one is what the platform is for.</p>
+      <p class="aside">The big open question: does this simple picture produce superconductivity by itself, or is something missing? Large computer studies in recent years disagree, depending on the method used and on fine details such as how easily electrons hop diagonally. Settling questions like this is what this project is for.</p>
     </div>
   </div>
 </section>
@@ -406,7 +406,7 @@ footer a { color: var(--ink-2); }
       <article class="method">
         <h3>The perfect calculator</h3>
         <span class="tech">Exact diagonalization</span>
-        <dl><dt>Works well</dt><dd>Checks every possible arrangement of electrons, so its answers are exact.</dd><dt>Breaks down</dt><dd>Only on tiny grids of about 20 sites. Beyond that there are too many arrangements to check.</dd></dl>
+        <dl><dt>Works well</dt><dd>Checks every possible arrangement of electrons, so its answers are exact.</dd><dt>Breaks down</dt><dd>Can only handle tiny grids of about 20 sites. Beyond that there are too many arrangements to check.</dd></dl>
       </article>
       <article class="method">
         <h3>The random sampler</h3>
@@ -476,8 +476,8 @@ footer a { color: var(--ink-2); }
     <div class="prose">
       <span class="label">The plan</span>
       <h2>Seven layers, each built on the ones below</h2>
-      <p>Hunting directly for a theory leaves little behind if it fails. Building checkable infrastructure is useful whatever happens: research groups can use it today, future AI models start from firmer ground, and it carries over to other materials with strongly interacting electrons.</p>
-      <p>It also matches how the <a href="https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/">Grand Challenge</a> judges theories: by how well they predict independent experimental observations, with an implementation others can reproduce, and with the observations used to tune a theory kept separate from the ones it predicts.</p>
+      <p>Hunting directly for the answer leaves little behind if the hunt fails. Building reliable, checkable tools is useful whatever happens: research groups can use them today, future AI systems start from firmer ground, and the same tools work for other materials where electrons behave like a crowd.</p>
+      <p>It also matches how the <a href="https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/">Grand Challenge</a> judges explanations: on how well they predict experimental results they weren't tuned to match, using code or working that others can rerun.</p>
     </div>
     <div class="layers" id="layer-list"></div>
   </div>
@@ -488,14 +488,14 @@ footer a { color: var(--ink-2); }
     <div class="prose">
       <span class="label">Results</span>
       <h2>A result counts once someone else reproduces it</h2>
-      <p>Anyone can submit a calculation. Every record is permanent and fingerprinted, so it can't be quietly edited later, and it names the person responsible for it. Its status is computed from what others find, never declared by the submitter.</p>
+      <p>Anyone can submit a calculation. Every record is permanent and stamped with a unique code that changes if anyone alters it, so it can't be quietly edited later. Each record names the person responsible for it. Whether a result counts as trusted is worked out from what other people find, never declared by the person who submitted it.</p>
     </div>
     <ol class="flow">
       <li><h3>Submitted</h3><p>A contributor runs a calculation and records it with everything needed to rerun it: the exact problem, the code version and the settings.</p></li>
       <li><h3>Reproduced</h3><p>A different person reruns it independently. Using a different method counts as even stronger evidence.</p></li>
       <li><h3>Trusted</h3><p>The result becomes something others can build on, compare theories against and cite.</p></li>
     </ol>
-    <p class="dispute">If a reproduction disagrees, the result is marked <b>disputed</b> and investigated in the open. Disagreements are findings: each one is either a bug to fix or physics to understand. Nobody resolves one by editing the numbers.</p>
+    <p class="dispute">If a reproduction disagrees, the result is marked <b>disputed</b> and investigated in the open. Disagreements are useful: each one is either a mistake to fix or something new to understand. Nobody settles one by editing the numbers.</p>
   </div>
 </section>
 
@@ -504,7 +504,7 @@ footer a { color: var(--ink-2); }
     <div class="prose">
       <span class="label">Get involved</span>
       <h2>Built in the open, by people and their AI agents</h2>
-      <p>The work is split into small tasks with clear pass/fail criteria, so many contributors can work in parallel and the automated checks decide what gets in.</p>
+      <p>The work is split into small tasks, each with a clear, checkable goal. That lets many people work at the same time, with automated checks deciding what gets accepted.</p>
     </div>
     <div class="roles">
       <article class="role">
@@ -600,7 +600,7 @@ footer a { color: var(--ink-2); }
       el("rect", {
         x: x0, y: y, width: w, height: barH, rx: 4,
         class: m.fam === "cuprate" ? "bar-cuprate" : "bar-conv",
-        "data-tip": m.name + ": " + m.tc + " K (" + (m.fam === "cuprate" ? "cuprate" : "classic") + ", discovered " + m.year + ")"
+        "data-tip": m.name + ": works up to " + m.tc + " K (" + Math.round(m.tc - 273.15) + " \u00B0C). " + (m.fam === "cuprate" ? "Cuprate" : "Classic superconductor") + ", discovered " + m.year
       }, svg);
       el("text", { x: X(m.tc) + 8, y: y + barH / 2 + 5, "font-size": 13 }, svg, m.tc + " K");
     });
@@ -616,7 +616,7 @@ footer a { color: var(--ink-2); }
     const tb = document.getElementById("tc-table");
     materials.forEach(function (m) {
       const tr = document.createElement("tr");
-      [m.name, m.fam === "cuprate" ? "Cuprate" : "Classic", m.year, m.tc].forEach(function (v) {
+      [m.name, m.fam === "cuprate" ? "Cuprate" : "Classic", m.year, m.tc, Math.round(m.tc - 273.15)].forEach(function (v) {
         const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
       });
       tb.appendChild(tr);
@@ -660,7 +660,7 @@ footer a { color: var(--ink-2); }
       const cx = x0 + slot * (i + 0.5);
       el("rect", {
         x: cx - bw / 2, y: Y(e), width: bw, height: Math.max(y0 - Y(e), 2), rx: 4, class: "bar-plain",
-        "data-tip": d.g + " grid (" + d.n + " sites): 4^" + d.n + " = " + fmt(d.n) + " arrangements"
+        "data-tip": d.g + " grid, " + d.n + " sites: 4 multiplied by itself " + d.n + " times = " + fmt(d.n) + " possible arrangements"
       }, svg);
       el("text", { x: cx, y: y0 + 20, "text-anchor": "middle", "font-size": 13, class: "t-strong" }, svg, d.g);
       el("text", { x: cx, y: y0 + 37, "text-anchor": "middle", "font-size": 12, class: "t-muted" }, svg, d.n + " sites");
@@ -692,9 +692,9 @@ footer a { color: var(--ink-2); }
       el("text", { x: X(p), y: y0 + 22, "text-anchor": "middle", "font-size": 13 }, svg, Math.round(p * 100) + "%");
     });
     el("line", { x1: x0, x2: x1, y1: y0, y2: y0, class: "axis" }, svg);
-    el("text", { x: (x0 + x1) / 2, y: y0 + 46, "text-anchor": "middle", "font-size": 13, class: "t-strong" }, svg, "Electrons removed per copper site (doping, p)");
-    el("text", { x: 18, y: (y0 + y1) / 2, "text-anchor": "middle", "font-size": 13, class: "t-strong", transform: "rotate(-90 18 " + ((y0 + y1) / 2) + ")" }, svg, "Tc relative to its peak");
-    el("rect", { x: X(0), y: Y(1.08), width: X(0.02) - X(0), height: y0 - Y(1.08), class: "af-zone", "data-tip": "Antiferromagnetic insulator (schematic): electrons jammed, spins alternate" }, svg);
+    el("text", { x: (x0 + x1) / 2, y: y0 + 46, "text-anchor": "middle", "font-size": 13, class: "t-strong" }, svg, "Share of electrons removed (doping)");
+    el("text", { x: 18, y: (y0 + y1) / 2, "text-anchor": "middle", "font-size": 13, class: "t-strong", transform: "rotate(-90 18 " + ((y0 + y1) / 2) + ")" }, svg, "Working temperature, % of best");
+    el("rect", { x: X(0), y: Y(1.08), width: X(0.02) - X(0), height: y0 - Y(1.08), class: "af-zone", "data-tip": "Insulator (sketched, not measured): electrons jammed, no current flows" }, svg);
     el("text", { x: X(0.025), y: Y(0.97), "font-size": 13, class: "t-strong" }, svg, "Insulator");
     el("text", { x: X(0.025), y: Y(0.97) + 17, "font-size": 12 }, svg, "electrons jammed");
     const pts = [];
@@ -715,10 +715,10 @@ footer a { color: var(--ink-2); }
       const v = (p >= 0.05 && p <= 0.27) ? tc(p) : 0;
       cross.setAttribute("x1", X(p)); cross.setAttribute("x2", X(p)); cross.setAttribute("visibility", "visible");
       dot.setAttribute("cx", X(p)); dot.setAttribute("cy", Y(v)); dot.setAttribute("visibility", "visible");
-      let msg = "Doping " + (p * 100).toFixed(1) + "%: ";
-      if (p < 0.02) msg += "insulator (schematic)";
-      else if (v === 0) msg += "not superconducting";
-      else msg += "Tc = " + Math.round(v * 100) + "% of peak (e.g. " + Math.round(v * 93) + " K for YBCO-like 93 K peak)";
+      let msg = (p * 100).toFixed(1) + "% of electrons removed: ";
+      if (p < 0.02) msg += "insulator (sketched)";
+      else if (v === 0) msg += "not a superconductor";
+      else msg += "superconducts up to " + Math.round(v * 100) + "% of the best temperature (for example " + Math.round(v * 93) + " K if the best is 93 K)";
       showTip(msg, e.clientX, e.clientY);
     }
     hit.addEventListener("pointermove", move);
@@ -728,13 +728,13 @@ footer a { color: var(--ink-2); }
   /* ---------- layers ---------- */
   (function () {
     const layers = [
-      [7, "Tools built for AI agents", "Cost estimates, automatic sanity checks, a derivation checker, theories written as testable predictions", true],
-      [6, "A standing prediction challenge", "Theories predict answers before they are revealed, then get scored in public. The scoreboard everything else feeds.", false, true],
-      [5, "Forty years of experiments, machine-readable", "Measurements from thousands of papers, each with its source", false],
-      [4, "Predicting what instruments measure", "Turning simulation output into exactly what each experiment records", false],
-      [3, "From real materials to model settings", "Crystal structure in, model knobs with error bars out", false],
-      [2, "Many methods, checked against each other", "Exact solvers today; Monte Carlo, tensor networks and more next", true],
-      [1, "One shared way to describe the problem", "Every result traces back to exactly what was solved", true]
+      [7, "Tools built for AI agents", "Cost estimates before running anything, automatic sanity checks, a checker for maths steps, and theories written as testable predictions", true],
+      [6, "A standing prediction contest", "Explanations predict answers before they're revealed, then get scored in public. Everything else feeds this scoreboard.", false, true],
+      [5, "Forty years of experiments in one database", "Measurements from thousands of research papers, each linked to its source", false],
+      [4, "Predicting what lab instruments see", "Turning simulation results into exactly what each kind of experiment records, so theory and data can be compared fairly", false],
+      [3, "From real materials to dial settings", "Start from a real material's atomic structure and work out the dial settings for the simplified picture, with an honest estimate of uncertainty", false],
+      [2, "Many methods, checked against each other", "Exact calculations today; the sampling, strip and AI methods next", true],
+      [1, "One shared way to describe the problem", "So every result can be traced back to exactly what was calculated", true]
     ];
     const ok = '<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="currentColor"/><path d="M4 7.2l2 2 4-4.4" stroke="var(--surface)" stroke-width="1.8" fill="none"/></svg>';
     const todo = '<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-dasharray="2.5 2"/></svg>';
@@ -828,10 +828,10 @@ footer a { color: var(--ink-2); }
       } else record(0);
     }
     function describe(rate) {
-      if (U >= 5 && dop === 0) return "One electron per site with strong repulsion: almost every hop is blocked. The grid is jammed, an insulator. Now remove some electrons.";
-      if (U >= 5 && dop > 0) return "Removing electrons opens empty sites, so electrons can move without doubling up. Cuprates superconduct in a window like this, but nobody can yet explain exactly why.";
-      if (U < 2) return "Weak repulsion: electrons double up freely and move easily, like in an ordinary metal. Turn U up to see them jam.";
-      return "Moderate repulsion: doubling up is costly but happens. Turn U higher with nothing removed to see the grid jam.";
+      if (U >= 5 && dop === 0) return "One electron on every site, all pushing each other away hard: almost every move is blocked. The grid is jammed, so it can't conduct electricity. Now try removing some electrons.";
+      if (U >= 5 && dop > 0) return "Removing electrons leaves empty sites, so the rest can move without crowding together. Real cuprates superconduct in conditions like these, but nobody can yet explain exactly why.";
+      if (U < 2) return "Weak repulsion: electrons share sites freely and move easily, like in an ordinary metal. Turn the repulsion up to see them jam.";
+      return "Medium repulsion: sharing a site is costly but still happens. Turn the repulsion higher, with no electrons removed, to see the grid jam.";
     }
     function updateReadout() {
       const rate = win.length ? winAcc / win.length : 0;
@@ -912,7 +912,7 @@ footer a { color: var(--ink-2); }
       updateReadout(); draw();
     }
     uIn.addEventListener("input", function () {
-      U = parseFloat(uIn.value); uOut.textContent = U + " t";
+      U = parseFloat(uIn.value); uOut.textContent = U + " \u00B7 " + (U < 2 ? "weak" : U < 5 ? "medium" : "strong");
       win.length = 0; winAcc = 0;
       if (!playing) settle();
     });
