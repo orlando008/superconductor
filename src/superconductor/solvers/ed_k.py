@@ -293,18 +293,25 @@ class MomentumED(Solver):
     """Exact diagonalization block by block in total momentum (periodic lattices).
 
     ``workers`` > 1 solves momentum blocks in parallel processes (Linux/macOS fork); results
-    are identical, only wall time changes. Start Python with ``OPENBLAS_NUM_THREADS=1`` (or
-    ``OMP_NUM_THREADS=1``) when using workers. Otherwise each worker's BLAS threads compete
-    for the same cores: on a 4-core machine, one Lanczos pass on a 4x4 block took 14 s with
-    threaded BLAS and 9.8 s single-threaded.
+    are identical, only wall time changes. It defaults to the ``SUPERCONDUCTOR_WORKERS``
+    environment variable (else 1), so commands such as ``superconductor submit`` can use it.
+
+    Start Python with ``OPENBLAS_NUM_THREADS=1`` (or ``OMP_NUM_THREADS=1``) when using
+    workers. Otherwise each worker's BLAS threads compete for the same cores: on a 4-core
+    machine, one Lanczos pass on a 4x4 block took 14 s with threaded BLAS and 9.8 s
+    single-threaded.
     """
 
     name = "ed-k"
     version = "0.1.0"
 
-    def __init__(self, dense_limit: int = DENSE_LIMIT, workers: int = 1):
+    def __init__(self, dense_limit: int = DENSE_LIMIT, workers: int | None = None):
         self.dense_limit = dense_limit
-        self.workers = workers
+        if workers is None:  # e.g. for `superconductor submit`, which builds solvers by name
+            import os
+
+            workers = int(os.environ.get("SUPERCONDUCTOR_WORKERS", "1"))
+        self.workers = max(1, workers)
 
     def applicability(self, model: HubbardModel) -> str | None:
         lat = model.lattice
@@ -331,8 +338,7 @@ class MomentumED(Solver):
             "residual_tol": _RESIDUAL_TOL,
             "lanczos_tol": _LANCZOS_TOL,
             "max_degeneracy": MAX_DEGENERACY,
-            "workers": self.workers,
-        }
+        }  # workers is deliberately absent: it changes wall time, never the result
 
     def estimate(self, model: HubbardModel) -> CostEstimate:
         """Memory falls by about the number of translations G; total time stays close to ED's,

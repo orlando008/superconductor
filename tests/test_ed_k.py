@@ -82,6 +82,12 @@ def test_blocks_are_real_exactly_when_all_phases_are_plus_or_minus_one():
         assert (ham.dtype == np.float64) == zone_boundary, k
 
 
+def test_workers_from_environment_and_not_recorded_as_a_setting(monkeypatch):
+    monkeypatch.setenv("SUPERCONDUCTOR_WORKERS", "3")
+    assert MomentumED().workers == 3
+    assert "workers" not in MomentumED().settings()  # speed only, never the result
+
+
 def test_parallel_workers_give_identical_results():
     m = model(SquareLattice(lx=3, ly=3), 3, 2)
     serial, parallel = MomentumED().solve(m), MomentumED(workers=2).solve(m)
