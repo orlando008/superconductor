@@ -1,10 +1,13 @@
 # Project website
 
-`index.html` is the public explainer, published to GitHub Pages by
+`index.html` is the public explainer and `physicists.html` the technical brief for
+researchers. Both are published to GitHub Pages by
 `.github/workflows/pages.yml` whenever `site/` changes on `main`.
 
-It is a single self-contained file: inline CSS and JavaScript, fonts from Google Fonts, no
-build step. Open it directly in a browser to preview changes.
+Each page is a single self-contained file: inline CSS (and, for `index.html`, JavaScript),
+fonts from Google Fonts, and no build step. Open a page directly in a browser to preview
+changes. `physicists.html` copies the home page's stylesheet, so if you change shared
+styles, change both.
 
 ## Guidelines
 

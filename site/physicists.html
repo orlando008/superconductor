@@ -1,0 +1,406 @@
+<!doctype html><!--pages-only-->
+<html lang="en"><!--pages-only-->
+<head><!--pages-only-->
+<meta charset="utf-8"><!--pages-only-->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><!--pages-only-->
+<title>Cuprate Workbench for Physicists</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Technical brief for researchers in correlated-electron numerics: conventions, solvers, how results are verified, and the design questions that need expert judgement.">
+<link rel="alternate" type="text/plain" href="llms.txt" title="Guide for AI agents">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one ~68ch reading column with wider breakout figures; the hero splits the thesis from a live lattice you can play with. */
+:root {
+  --bg: #f3f6f8;
+  --surface: #ffffff;
+  --ink: #0f1b26;
+  --ink-2: #445361;
+  --muted: #687684;
+  --line: #d4dde4;
+  --accent: #a24f1d;        /* copper: the Cu in CuO2 */
+  --accent-soft: #f4e3d8;
+  --on-accent: #ffffff;
+  --spin-up: #2a78d6;       /* chart slot 1 */
+  --spin-dn: #1baf7a;       /* chart slot 3 */
+  --good: #0f7a3c;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.3rem;
+  --step-2: 1.75rem;
+  --step-3: clamp(2.1rem, 4.6vw, 3.4rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1319; --surface: #121c25; --ink: #e6edf2; --ink-2: #a9b6c1; --muted: #85929e;
+    --line: #24323e; --accent: #e3905f; --accent-soft: #3a2416; --on-accent: #1b0f07;
+    --spin-up: #3987e5; --spin-dn: #199e70; --good: #4cc27a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1319; --surface: #121c25; --ink: #e6edf2; --ink-2: #a9b6c1; --muted: #85929e;
+  --line: #24323e; --accent: #e3905f; --accent-soft: #3a2416; --on-accent: #1b0f07;
+  --spin-up: #3987e5; --spin-dn: #199e70; --good: #4cc27a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.6;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.12; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: var(--step-2); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: var(--step-1); font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 0.18em; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px;
+}
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+.label {
+  font-family: var(--font-display); font-size: var(--step--1); font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+
+/* ---------- top bar ---------- */
+.topbar { border-bottom: 1px solid var(--line); }
+.topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; flex-wrap: wrap; }
+.brand { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 26px; height: 26px; }
+.topbar nav { display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--font-display); font-size: var(--step--1); font-weight: 500; }
+.topbar nav a { color: var(--ink-2); text-decoration: none; }
+.topbar nav a:hover { color: var(--accent); }
+
+/* ---------- hero ---------- */
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; padding-block: 56px 64px; align-items: start; }
+.hero-text { display: grid; gap: 22px; min-width: 0; }
+.hero-text .lede { font-size: 1.2rem; color: var(--ink-2); max-width: 36em; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 0.98rem; text-decoration: none;
+  border: 1.5px solid var(--accent); cursor: pointer;
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-ghost { background: transparent; color: var(--accent); }
+.facts { display: flex; flex-wrap: wrap; gap: 10px 28px; color: var(--muted); font-size: var(--step--1); font-family: var(--font-display); }
+.facts b { color: var(--ink); font-weight: 700; }
+.challenge { font-size: 0.95rem; color: var(--ink-2); max-width: 36em; padding-left: 14px; border-left: 2px solid var(--line); }
+
+.lab { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.lab-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.lab-head h2 { font-size: var(--step-1); }
+.toy-tag { font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; }
+#lattice { width: 100%; aspect-ratio: 1 / 1; max-width: 100%; display: block; border-radius: 8px; background: var(--bg); touch-action: manipulation; }
+.controls { display: grid; gap: 12px; }
+.control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; }
+.control label { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; }
+.control output { font-family: var(--font-mono); font-size: 0.9rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.control input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.control .hint { grid-column: 1 / -1; font-size: 0.85rem; color: var(--muted); }
+.meter-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font-family: var(--font-display); font-size: 0.92rem; }
+.meter { height: 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+.meter > span { display: block; height: 100%; width: 0%; background: var(--accent); border-radius: 999px; transition: width 0.4s ease; }
+.meter-row output { font-family: var(--font-mono); font-variant-numeric: tabular-nums; min-width: 3.5ch; text-align: right; }
+.lab-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.85rem; color: var(--ink-2); font-family: var(--font-display); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sw-up { background: var(--spin-up); }
+.sw-dn { background: var(--spin-dn); }
+.sw-dbl { border: 2px solid var(--accent); border-radius: 50%; }
+.btn-small { padding: 6px 12px; font-size: 0.85rem; }
+.lab-read { font-size: 0.95rem; color: var(--ink-2); }
+
+/* ---------- sections ---------- */
+section.block { border-top: 1px solid var(--line); }
+section.block > .wrap { padding-block: 64px; display: grid; gap: 28px; }
+.prose { max-width: 68ch; display: grid; gap: 16px; }
+.prose p { color: var(--ink); }
+.prose .aside { color: var(--ink-2); font-size: 0.97rem; }
+figure { margin: 0; display: grid; gap: 12px; min-width: 0; }
+figcaption { font-size: 0.92rem; color: var(--ink-2); max-width: 68ch; }
+.chart-box { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 14px 10px; overflow-x: auto; }
+.chart-box svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.diagram-box svg { min-width: 520px; }
+details.data { font-size: 0.9rem; color: var(--ink-2); }
+details.data summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; }
+details.data .table-scroll { overflow-x: auto; margin-top: 8px; }
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 100%; }
+th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-family: var(--font-display); font-weight: 600; color: var(--ink); }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-display); font-size: 0.88rem; color: var(--ink-2); padding: 0 4px 8px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* SVG roles: every color comes from a token */
+svg text { font-family: var(--font-display); fill: var(--ink-2); }
+svg .t-strong { fill: var(--ink); font-weight: 700; }
+svg .t-muted { fill: var(--muted); }
+svg .grid { stroke: var(--line); stroke-width: 1; }
+svg .axis { stroke: var(--muted); stroke-width: 1; }
+svg .ref { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; }
+svg .bar-cuprate { fill: var(--spin-up); }
+svg .bar-conv { fill: var(--spin-dn); }
+svg .bar-plain { fill: var(--spin-up); }
+svg .accent-fill { fill: var(--accent); }
+svg .accent-stroke { stroke: var(--accent); }
+svg .dome-area { fill: var(--spin-up); fill-opacity: 0.16; }
+svg .dome-line { stroke: var(--spin-up); stroke-width: 2.5; fill: none; }
+svg .af-zone { fill: var(--spin-dn); fill-opacity: 0.22; }
+svg .surface-fill { fill: var(--surface); }
+svg .bg-fill { fill: var(--bg); }
+svg .ink-stroke { stroke: var(--ink-2); fill: none; stroke-width: 1.5; }
+svg .line-stroke { stroke: var(--line); }
+svg .crosshair { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 3; }
+svg .hit { fill: transparent; cursor: crosshair; }
+svg [data-tip] { cursor: default; }
+
+.tip {
+  position: fixed; z-index: 30; pointer-events: none; max-width: 260px;
+  background: var(--ink); color: var(--bg); font-family: var(--font-display); font-size: 0.85rem;
+  line-height: 1.35; padding: 8px 10px; border-radius: 6px;
+}
+
+/* Methods */
+.methods-group { display: grid; gap: 14px; }
+.methods-title { font-size: var(--step-1); }
+.methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.method { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.method h3 { font-size: 1.05rem; }
+.method .tech { font-family: var(--font-display); font-size: 0.82rem; color: var(--muted); margin-top: -4px; }
+.method dl { margin: 0; display: grid; gap: 6px; font-size: 0.95rem; }
+.method dt { font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.method dd { margin: 0; }
+
+/* Story */
+.story { border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; display: grid; gap: 8px; max-width: 68ch; }
+.story .big { font-family: var(--font-mono); font-size: 1.05rem; }
+
+/* Layers */
+.layers { display: grid; gap: 8px; max-width: 820px; list-style: none; padding: 0; margin: 0; }
+.layer { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+.layer.key { border-color: var(--accent); background: var(--accent-soft); }
+.layer .n { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; color: var(--muted); text-align: center; }
+.layer .what { min-width: 0; }
+.layer .what b { font-family: var(--font-display); display: block; }
+.layer .what span { color: var(--ink-2); font-size: 0.93rem; }
+.status { font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--muted); }
+.status.started { color: var(--good); }
+.status svg { width: 14px; height: 14px; }
+
+/* Lifecycle */
+.flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; counter-reset: step; }
+.flow li { list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.flow li::before { counter-increment: step; content: "Step " counter(step); font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.flow { padding: 0; margin: 0; }
+.flow h3 { font-size: 1.05rem; }
+.flow p { font-size: 0.95rem; color: var(--ink-2); }
+.dispute { max-width: 68ch; font-size: 0.95rem; color: var(--ink-2); }
+
+/* Help */
+.roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.role { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.role h3 { font-size: 1.1rem; }
+.role p { font-size: 0.97rem; color: var(--ink-2); }
+.role.lead { border-color: var(--accent); background: var(--accent-soft); }
+.prompt-label { font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.cmd.prompt { align-items: start; background: var(--surface); }
+.cmd.prompt code { white-space: normal; overflow-x: visible; overflow-wrap: anywhere; font-family: var(--font-body); font-size: 0.92rem; line-height: 1.5; color: var(--ink); }
+.cmd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 8px 8px 12px; }
+.cmd code { overflow-x: auto; white-space: nowrap; font-size: 0.82rem; }
+.copy { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+
+footer { border-top: 1px solid var(--line); }
+footer .wrap { padding-block: 32px 48px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; font-size: 0.9rem; color: var(--muted); font-family: var(--font-display); }
+footer a { color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  .hero .wrap { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-block: 36px 48px; }
+  .methods, .roles, .flow { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .meter > span { transition: none; }
+}
+</style>
+<style>
+/* Brief page: one reading column, tables and code that scroll inside their own boxes. */
+.doc .wrap { max-width: 860px; }
+.doc section { border-top: 1px solid var(--line); }
+.doc section > .wrap { padding-block: 40px; display: grid; gap: 16px; }
+.doc .intro .wrap { padding-block: 48px 40px; display: grid; gap: 18px; }
+.doc p, .doc li { max-width: 68ch; }
+.doc ul, .doc ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+.doc .callout { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 16px 18px; display: grid; gap: 8px; max-width: 68ch; }
+.doc .formula { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; }
+.doc .formula code { white-space: pre; font-size: 0.9rem; }
+.doc .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.doc table { min-width: 560px; width: 100%; }
+.doc th, .doc td { white-space: normal; padding: 10px 14px; vertical-align: top; border-bottom: 1px solid var(--line); }
+.doc tr:last-child td { border-bottom: none; }
+.doc td code, .doc th code { white-space: nowrap; }
+.doc .issues { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.doc .issues li { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; max-width: none; min-width: 0; }
+.doc .issues a { font-family: var(--font-display); font-weight: 700; }
+.doc .issues span { color: var(--ink-2); font-size: 0.95rem; }
+.doc .steps li::marker { font-family: var(--font-display); font-weight: 700; color: var(--accent); }
+.doc .stamp { color: var(--muted); font-size: 0.9rem; }
+@media (max-width: 700px) { .doc .issues { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head><!--pages-only-->
+<body><!--pages-only-->
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="Cuprate Workbench home">
+      <svg class="brand-mark" viewBox="0 0 26 26" aria-hidden="true">
+        <rect x="1" y="1" width="24" height="24" rx="5" class="bg-fill" style="stroke: var(--line)"/>
+        <circle cx="8" cy="8" r="2.6" class="accent-fill"/><circle cx="18" cy="8" r="2.6" class="accent-fill"/>
+        <circle cx="8" cy="18" r="2.6" class="accent-fill"/><circle cx="18" cy="18" r="2.6" class="accent-fill"/>
+        <path d="M8 8H18M8 18H18M8 8V18M18 8V18" class="accent-stroke" stroke-width="1.2" fill="none" opacity="0.55"/>
+      </svg>
+      Cuprate Workbench
+    </a>
+    <nav aria-label="Sections">
+      <a href="#model">Model</a>
+      <a href="#solvers">Solvers</a>
+      <a href="#checks">Checks</a>
+      <a href="#needed">Where you can help</a>
+      <a href="./">Home</a>
+    </nav>
+  </div>
+</header>
+
+<main class="doc" id="top">
+<section class="intro" style="border-top: none">
+  <div class="wrap">
+    <span class="label">For physicists</span>
+    <h1>A verification platform for Hubbard-model numerics</h1>
+    <p class="lede" style="font-size: 1.15rem; color: var(--ink-2)">A short brief for researchers in correlated-electron numerics: what this project is, how its results are checked, and where expert judgement is needed. The plain-language overview is on the <a href="./">home page</a>.</p>
+    <p>It's an open-source platform for <b>reproducible, cross-checked numerics on the Hubbard model</b>, built towards <a href="https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/">Grand Challenge Problem 01: A Predictive Theory of Cuprate Superconductivity</a> (Discovered Materials). It is an independent community project.</p>
+    <div class="callout">
+      <b style="font-family: var(--font-display)">Read this first</b>
+      <p>The organizer is not a physicist, and most of the code is written by AI agents, under <a href="https://github.com/orlando008/superconductor/blob/main/AGENTS.md">rules designed for that situation</a>. The project's answer to "why trust AI-written code?" is that you shouldn't have to: every result is checked by methods that share no code with the solver that produced it. The most useful thing an expert can do is try to break it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="model">
+  <div class="wrap">
+    <h2>Model and conventions</h2>
+    <p>The single-band t-t′-U Hubbard model on finite square lattices, with periodic or open boundaries and fixed N<sub>↑</sub>, N<sub>↓</sub> (canonical ensemble):</p>
+    <div class="formula"><code>H = −t Σ⟨ij⟩σ (c†<sub>iσ</sub> c<sub>jσ</sub> + h.c.) − t′ Σ⟨⟨ij⟩⟩σ (c†<sub>iσ</sub> c<sub>jσ</sub> + h.c.) + U Σ<sub>i</sub> n<sub>i↑</sub> n<sub>i↓</sub> − μ N</code></div>
+    <ul>
+      <li>t &gt; 0 and t′ &lt; 0 for cuprates. Energies are in units of t and <b>include −μN</b>.</li>
+      <li><b>Periodic direction of length 2:</b> the wrap-around bond is counted twice, so a periodic 2×2 cluster has effective hopping 2t. This makes the real-space hopping reproduce −2t(cos k<sub>x</sub> + cos k<sub>y</sub>) − 4t′ cos k<sub>x</sub> cos k<sub>y</sub> exactly on the allowed momenta. Some papers treat 2×2 as a 4-site ring without doubling, so take care when comparing.</li>
+      <li>At T = 0, observables are averaged uniformly over a degenerate ground manifold (the T → 0⁺ limit).</li>
+      <li>Every model has a content fingerprint, and every result records it.</li>
+    </ul>
+    <p>Definitions live in exactly one place each: <a href="https://github.com/orlando008/superconductor/blob/main/src/superconductor/model/hubbard.py"><code>model/hubbard.py</code></a> and <a href="https://github.com/orlando008/superconductor/blob/main/src/superconductor/model/lattice.py"><code>lattice.py</code></a> for the model, and <a href="https://github.com/orlando008/superconductor/blob/main/src/superconductor/solvers/base.py"><code>solvers/base.py</code></a> for observables.</p>
+  </div>
+</section>
+
+<section id="solvers">
+  <div class="wrap">
+    <h2>Solvers</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Solver</th><th>What it covers</th></tr></thead>
+        <tbody>
+          <tr><td><code>ed</code></td><td>Exact diagonalization: dense, or Lanczos with a deflation check that the degenerate ground manifold is complete (plain ARPACK silently returned a wrong ground energy in one degenerate case); finite T from the full spectrum.</td></tr>
+          <tr><td><code>ed-k</code></td><td>ED block by block in total momentum. Doped 4×4 clusters are reachable on a 15 GB machine.</td></tr>
+          <tr><td><code>free</code></td><td>U = 0, exact at T = 0 and at finite T in the canonical ensemble.</td></tr>
+          <tr><td><code>atomic</code></td><td>t = t′ = 0, exact at any U and T.</td></tr>
+          <tr><td><code>bethe</code></td><td>Lieb–Wu ground states of periodic 1D rings at any U &gt; 0, including higher-spin ground states of a sector.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="checks">
+  <div class="wrap">
+    <h2>How results are checked</h2>
+    <ul>
+      <li><b>Solver against solver:</b> every applicable pair of solvers is compared on a standard suite of models.</li>
+      <li><b>An independent reference Hamiltonian:</b> built with Jordan–Wigner operators and image-counted hopping, sharing no code with the solvers, and compared through spectra and trace moments.</li>
+      <li><b>Perturbative limits:</b> the weak-coupling remainder must be ≤ 0 (variational) and scale as U²; the strong-coupling remainder at half filling must scale as U⁻³ against an independent Heisenberg solver.</li>
+      <li><b>Mutation tests:</b> each check is shown to catch a deliberately planted bug.</li>
+      <li><b>Results registry:</b> records are append-only and content-addressed. A result counts as "reproduced" only when a different person reruns it. Numerical settings, convergence diagnostics and hardware are recorded with every result.</li>
+    </ul>
+    <p class="stamp">As of November 2026: about 1,000 solver comparisons with 0 disagreements, 125 Hamiltonians matching the independent reference, and 489 tests.</p>
+    <h3>Literature check</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>4×4, 5↑ + 5↓, U = 4</th><th>E/N, this project (<code>ed-k</code>)</th><th>E/N, published</th></tr></thead>
+        <tbody>
+          <tr><td>t′ = 0</td><td>−1.22380860</td><td>−1.223808</td></tr>
+          <tr><td>t′ = −0.22</td><td>−1.12616014</td><td>−1.126160</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Published values: Husslein, Fettes &amp; Morgenstern, <a href="https://arxiv.org/abs/cond-mat/9705026">arXiv:cond-mat/9705026</a>, Tables 1 and 2 (energy per site). The t′ match also shows that paper uses the same sign convention for t′.</p>
+  </div>
+</section>
+
+<section id="needed">
+  <div class="wrap">
+    <h2>Where expert judgement is needed</h2>
+    <p>These design questions are blocked on physics decisions. Each issue lists what has to be settled.</p>
+    <ul class="issues">
+      <li><a href="https://github.com/orlando008/superconductor/issues/19">#19 Pairing correlations</a><span>Which definitions to use (pair–pair, d-wave form factor, vertex-corrected, pair-binding energy), and how to store and compare array-valued observables.</span></li>
+      <li><a href="https://github.com/orlando008/superconductor/issues/20">#20 Published benchmarks</a><span>Which small-cluster values to trust, and which convention traps to document.</span></li>
+      <li><a href="https://github.com/orlando008/superconductor/issues/21">#21 Uncertainty and trust levels</a><span>Separating statistical from systematic error, and grading how independent a reproduction is.</span></li>
+      <li><a href="https://github.com/orlando008/superconductor/issues/8">#8 Three-band Emery model</a><span>Schema design and phase conventions.</span></li>
+      <li><a href="https://github.com/orlando008/superconductor/issues/9">#9 ALF determinant QMC wrapper</a><span>Canonical versus grand-canonical comparison, Trotter extrapolation, error bars.</span></li>
+      <li><a href="https://github.com/orlando008/superconductor/issues/26">#26 4×4 at half filling</a><span>Whether point group and spin-flip symmetry is the right next step.</span></li>
+    </ul>
+    <p>Equally valuable: <b>tell us which questions matter most</b>, and what in the current design an expert would distrust.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What's in it for you</h2>
+    <ul>
+      <li>Reproducible, cross-checked benchmark data and tools your group can use. Result data is public domain (CC0), and code is MIT licensed.</li>
+      <li>A pool of AI agents to do well-specified implementation work once the physics decisions are made.</li>
+      <li>Credit: git history, the <code>contributor</code> field on every record, <a href="https://github.com/orlando008/superconductor/blob/main/CITATION.cff"><code>CITATION.cff</code></a>, and an offer of co-authorship on papers that build on the platform (see <a href="https://github.com/orlando008/superconductor/blob/main/GOVERNANCE.md">GOVERNANCE.md</a>).</li>
+    </ul>
+    <h3>Ways to help, smallest first</h3>
+    <ol class="steps">
+      <li><b>One hour:</b> comment on one design issue above, or skim this page and the code and tell us what you'd distrust.</li>
+      <li><b>A few hours a month:</b> act as a domain reviewer for physics changes to the protected core (model format, verification, registry).</li>
+      <li><b>Ongoing:</b> help choose the research questions the platform should answer first.</li>
+    </ol>
+    <p>To get in touch, comment on any issue, or open one with the <a href="https://github.com/orlando008/superconductor/issues/new/choose">"Test or research idea"</a> template.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Cuprate Workbench is open source: code under the MIT licence, result data in the public domain (CC0), so please cite the project if you use it. This page lives in the repository; improve it with a pull request.</span>
+    <span><a href="https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/">The Grand Challenge</a> · <a href="https://github.com/orlando008/superconductor">GitHub</a> · <a href="https://github.com/orlando008/superconductor/blob/main/docs/vision.md">Vision</a> · <a href="https://github.com/orlando008/superconductor/blob/main/docs/roadmap.md">Roadmap</a> · <a href="llms.txt">For AI agents</a></span>
+  </div>
+</footer>
+</body><!--pages-only-->
+</html><!--pages-only-->

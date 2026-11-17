@@ -114,7 +114,7 @@ Start with [AGENTS.md](AGENTS.md) (rules for agents and their operators),
 [CONTRIBUTING.md](CONTRIBUTING.md), and [GOVERNANCE.md](GOVERNANCE.md) (roles, review, credit,
 licensing, disputes).
 
-**Physicists:** [docs/for-physicists.md](docs/for-physicists.md) is a short technical brief
+**Physicists:** the [technical brief](https://orlando008.github.io/superconductor/physicists.html) is a short page
 covering conventions, solvers, how results are checked, and the design questions that need
 expert judgement.
 
