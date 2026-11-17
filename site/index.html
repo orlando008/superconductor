@@ -180,6 +180,8 @@ svg [data-tip] { cursor: default; }
 }
 
 /* Methods */
+.methods-group { display: grid; gap: 14px; }
+.methods-title { font-size: var(--step-1); }
 .methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .method { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
 .method h3 { font-size: 1.05rem; }
@@ -403,6 +405,8 @@ footer a { color: var(--ink-2); }
       <p>Think about measuring distances. A tape measure is exact, but only across a room. A laser rangefinder reaches across a field, but can be fooled by bright sunlight. GPS works anywhere, but is only accurate to a few metres. None of them is right everywhere. Where their ranges overlap, though, they should give the same reading. If they don't, one of them is broken.</p>
       <p>Calculating how electrons behave works the same way. Exact answers are impossible for anything but tiny grids, so scientists use a range of shortcut methods. Each one is trustworthy in some situations and unreliable in others. A single method's answer can't tell you whether you are seeing real physics or the method failing.</p>
     </div>
+    <div class="methods-group">
+    <h3 class="methods-title">The main techniques for calculating how electrons behave</h3>
     <div class="methods">
       <article class="method">
         <h3>The perfect calculator</h3>
@@ -434,6 +438,7 @@ footer a { color: var(--ink-2); }
         <span class="tech">Diagrammatic Monte Carlo</span>
         <dl><dt>Works well</dt><dd>Builds the answer up in pieces from a simple starting point, and can describe an infinitely large grid.</dd><dt>Breaks down</dt><dd>When electrons repel strongly, the pieces stop adding up to a reliable answer.</dd></dl>
       </article>
+    </div>
     </div>
     <figure>
       <div class="chart-box diagram-box">
