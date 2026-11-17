@@ -76,8 +76,15 @@ disqualification and removal of the contributor's records from scoring.
 ## Licensing
 
 - Code: MIT (see `LICENSE`).
-- Result records in `results/`: contributed under CC BY 4.0, so anyone can reuse them with
-  attribution. *(Proposed; to be confirmed by the maintainers before the public launch.)*
+- Result records in `results/`: dedicated to the public domain under
+  [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (see `results/LICENSE`).
+  Anyone may use them for any purpose, with no conditions, so the data can be merged into
+  other datasets, benchmarks and training sets without attribution chains across thousands
+  of contributors. By submitting a record, a contributor dedicates it under CC0.
+- **Citation request (a scientific norm, not a legal condition):** if you use the results,
+  please cite the project (see `CITATION.cff`) and, where practical, the record ids you used.
+  Contributors still get credit through the `contributor` field of every record and through
+  git history.
 - Contributors certify that they have the right to contribute their work by adding a
   `Signed-off-by` line to commits ([Developer Certificate of Origin](https://developercertificate.org/)).
 

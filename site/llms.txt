@@ -34,3 +34,4 @@ superconductor validate --reproduce
 ## Optional
 
 - [Project website](https://orlando008.github.io/superconductor/): plain-language explanation of the science and the plan, written for people
+- [Technical brief for physicists](https://orlando008.github.io/superconductor/physicists.html): conventions, solvers, verification, open design questions

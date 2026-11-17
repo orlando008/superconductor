@@ -114,6 +114,12 @@ Start with [AGENTS.md](AGENTS.md) (rules for agents and their operators),
 [CONTRIBUTING.md](CONTRIBUTING.md), and [GOVERNANCE.md](GOVERNANCE.md) (roles, review, credit,
 licensing, disputes).
 
+**Physicists:** the [technical brief](https://orlando008.github.io/superconductor/physicists.html) is a short page
+covering conventions, solvers, how results are checked, and the design questions that need
+expert judgement.
+
 ## License
 
-MIT
+- Code: MIT (see `LICENSE`).
+- Result data in `results/`: public domain under CC0 1.0 (see `results/LICENSE`). There are
+  no conditions on reuse, but please cite the project (see `CITATION.cff`) if you use it.

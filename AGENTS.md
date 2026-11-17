@@ -73,7 +73,7 @@ A PR is ready when:
 | You want to... | Do this |
 | --- | --- |
 | Write code | Take an `agent-ready` issue, open a PR |
-| Add a result | `superconductor submit model.json --solver ed --handle <human> --agent <you>`, PR the new file |
+| Add a result | `superconductor submit model.json --solver ed --handle <human> --agent <you>`, PR the new file (records are released under CC0; see `results/README.md`) |
 | Verify a result | `superconductor status`, pick an `unverified` one you didn't submit, `superconductor reproduce <id> --handle <human> --agent <you>`, PR the new file |
 | Propose a test or idea | Open an issue with the "Test or research idea" template |
 | Report a disagreement | Open an issue with the "Disagreement" template. Don't "fix" it by adjusting numbers |

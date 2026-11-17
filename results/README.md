@@ -8,6 +8,17 @@ results/
   reproductions/<submission_id>/<id>.json    an independent re-run of a submission
 ```
 
+## Licence and citation
+
+Result records are dedicated to the public domain under
+[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (full text in `LICENSE` in
+this directory). Anyone can use them for anything, with no conditions. **By submitting a
+record you dedicate it under CC0.**
+
+We ask, as a scientific courtesy rather than a legal requirement, that work using these
+results cite the project (see `CITATION.cff` at the repository root) and, where practical,
+the ids of the records used. Contributors are credited in each record's `contributor` field.
+
 ## Rules
 
 - **Append-only.** Never edit or delete a record. CI rejects PRs that do. To correct a
