@@ -103,6 +103,7 @@ code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
 .btn-ghost { background: transparent; color: var(--accent); }
 .facts { display: flex; flex-wrap: wrap; gap: 10px 28px; color: var(--muted); font-size: var(--step--1); font-family: var(--font-display); }
 .facts b { color: var(--ink); font-weight: 700; }
+.challenge { font-size: 0.95rem; color: var(--ink-2); max-width: 36em; padding-left: 14px; border-left: 2px solid var(--line); }
 
 .lab { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
 .lab-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
@@ -263,6 +264,7 @@ footer a { color: var(--ink-2); }
       <span class="label">An open research platform</span>
       <h1>Why does copper oxide superconduct?</h1>
       <p class="lede">Forty years after their discovery, nobody can fully explain why copper-oxide ceramics carry electricity with zero resistance at temperatures far above every other material known at ordinary pressure. We're building the shared instruments to settle it: simulations that check each other, results anyone can reproduce, and a public scoreboard for theories.</p>
+      <p class="challenge">An independent, community-built project working on <a href="https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/">Grand Challenge Problem 01: A Predictive Theory of Cuprate Superconductivity</a>, posed by Discovered Materials.</p>
       <div class="ctas">
         <a class="btn btn-primary" href="https://github.com/orlando008/superconductor">See the code on GitHub</a>
         <a class="btn btn-ghost" href="#help">How to help</a>
@@ -466,6 +468,7 @@ footer a { color: var(--ink-2); }
       <span class="label">The plan</span>
       <h2>Seven layers, each built on the ones below</h2>
       <p>Hunting directly for a theory leaves little behind if it fails. Building checkable infrastructure is useful whatever happens: research groups can use it today, future AI models start from firmer ground, and it carries over to other materials with strongly interacting electrons.</p>
+      <p>It also matches how the <a href="https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/">Grand Challenge</a> judges theories: by how well they predict independent experimental observations, with an implementation others can reproduce, and with the observations used to tune a theory kept separate from the ones it predicts.</p>
     </div>
     <div class="layers" id="layer-list"></div>
   </div>
@@ -520,7 +523,7 @@ footer a { color: var(--ink-2); }
 <footer>
   <div class="wrap">
     <span>Cuprate Workbench is open source under the MIT licence. This page lives in the repository; improve it with a pull request.</span>
-    <span><a href="https://github.com/orlando008/superconductor">GitHub</a> · <a href="https://github.com/orlando008/superconductor/blob/main/docs/vision.md">Vision</a> · <a href="https://github.com/orlando008/superconductor/blob/main/docs/roadmap.md">Roadmap</a></span>
+    <span><a href="https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/">The Grand Challenge</a> · <a href="https://github.com/orlando008/superconductor">GitHub</a> · <a href="https://github.com/orlando008/superconductor/blob/main/docs/vision.md">Vision</a> · <a href="https://github.com/orlando008/superconductor/blob/main/docs/roadmap.md">Roadmap</a></span>
   </div>
 </footer>
 

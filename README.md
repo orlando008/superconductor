@@ -1,7 +1,9 @@
 # superconductor
 
 A correlated-electron workbench: shared infrastructure to help AI agent swarms (and human
-groups) work on Grand Challenge #1, **a predictive theory of cuprate superconductivity**.
+groups) work on [Grand Challenge Problem 01: **A Predictive Theory of Cuprate
+Superconductivity**](https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/), posed by Discovered Materials. This is an independent community
+project.
 
 The bet (see [docs/vision.md](docs/vision.md)) is that the bottleneck is *verification*, not
 ideas. So instead of hunting directly for a theory, this project builds a simulation and
