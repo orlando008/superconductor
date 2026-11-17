@@ -302,15 +302,25 @@ class SectorOperator:
         self.real = bool(np.allclose(chi.imag, 0.0))
         self.dtype = np.float64 if self.real else np.complex128
         # Entry (row = from, col = to) of H is conj(value(to <- from)) (H is Hermitian).
-        rows = np.repeat(np.arange(basis.n_reps, dtype=np.int32), np.diff(basis.indptr))
-        norm = np.sqrt(basis.stab_size[basis.cols] / basis.stab_size[rows])
-        amp = np.sign(basis.amp_code) * basis.amp_table[np.abs(basis.amp_code)]
-        phase = np.conj(chi)[basis.elem_code]
-        data = amp * norm * phase
-        keep = self.allowed[rows] & self.allowed[basis.cols]
-        data = np.where(keep, data, 0.0)
-        del rows, norm, amp, phase, keep
-        self.data = data.real if self.real else data
+        # Built in row chunks: the only full-size array is the result. (Building it in one go
+        # made five full-size temporaries, about 6 GB for 4x4 at 6+6.)
+        amp_table = basis.amp_table
+        chi_conj = np.conj(chi).real if self.real else np.conj(chi)
+        data = np.empty(len(basis.cols), dtype=self.dtype)
+        inv_sqrt_from = 1.0 / np.sqrt(basis.stab_size)
+        sqrt_to = np.sqrt(basis.stab_size)
+        step = max(1, int(2_000_000 // max(1.0, len(basis.cols) / max(1, basis.n_reps))))
+        for r0 in range(0, basis.n_reps, step):
+            r1 = min(basis.n_reps, r0 + step)
+            lo, hi = basis.indptr[r0], basis.indptr[r1]
+            rows = np.repeat(np.arange(r0, r1), np.diff(basis.indptr[r0 : r1 + 1]))
+            cols = basis.cols[lo:hi]
+            code = basis.amp_code[lo:hi]
+            chunk = np.sign(code) * amp_table[np.abs(code)] * sqrt_to[cols] * inv_sqrt_from[rows]
+            chunk = chunk * chi_conj[basis.elem_code[lo:hi]]
+            chunk[~(self.allowed[rows] & self.allowed[cols])] = 0
+            data[lo:hi] = chunk
+        self.data = data
         # Only ever used for matrix-vector products, which never modify the matrix.
         self.matrix = sp.csr_matrix(
             (self.data, basis.cols, basis.indptr), shape=(basis.n_reps, basis.n_reps)
