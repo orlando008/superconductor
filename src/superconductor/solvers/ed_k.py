@@ -1,41 +1,64 @@
-"""Exact diagonalization resolved by total momentum (translation symmetry).
+"""Exact diagonalization resolved by symmetry: total momentum, and spin flip at S^z = 0.
 
 On a lattice that is periodic in every direction of length > 1, the Hamiltonian commutes
-with all G = Lx * Ly lattice translations T_a, so it is block diagonal in total momentum K.
-Each block is about G times smaller than the (N_up, N_dn) sector, which cuts memory by about
-G. That's what brings 4x4 clusters within reach.
+with all Lx * Ly lattice translations T_a. When N_up = N_dn it also commutes with the global
+spin flip F (c_i,up <-> c_i,dn). Together these generate an abelian group of G elements
+g = T_a F^f (f = 0 or 1), so the Hamiltonian is block diagonal in sectors (K, p): total
+momentum K and spin-flip parity p = +-1 (p is fixed to +1 when spin flip isn't used). Each
+block is about G times smaller than the (N_up, N_dn) sector, which brings 4x4 clusters at
+half filling within reach of a 15 GB machine.
 
-**Basis.** Every occupation-basis state s belongs to an orbit {T_a s}. Its representative r
-is the orbit member with the smallest bit key (up bits above down bits). Momentum states are
+**Basis.** Every occupation-basis state s belongs to an orbit {g s}. Its representative r
+is the orbit member with the smallest bit key (up bits above down bits). Sector states are
 
-    |r, K> = (G S_r)^(-1/2) sum_a exp(-i K.a) T_a |r>,
+    |r; K, p> = (G S_r)^(-1/2) sum_g chi(g) g |r>,    chi(T_a F^f) = exp(-i K.a) p^f,
 
-where S_r is the number of translations that map r to itself. A representative is allowed
-in block K only if exp(-i K.b) sigma_b(r) = 1 for every such b, where sigma_b is the
-fermion sign of the translation. Otherwise the sum cancels to zero.
+where S_r is the number of group elements that map r to itself. A representative is allowed
+in a sector only if chi(b) sigma_b(r) = 1 for every such b, where sigma_b is the fermion
+sign of b acting on r. Otherwise the sum cancels to zero.
 
 **Fermion signs.** States are ordered as in ``ed``: up operators by ascending site, then down
 operators by ascending site. A translation permutes the sites. Reordering the translated
 creation operators back to ascending order gives the sign (-1)^(number of inversions),
-counted separately for up and down. The two blocks never mix, so moving one past the other
-costs nothing.
+counted separately for the up and the down operators. The spin flip turns |u, d> into
+(-1)^(N_up N_dn) |d, u>. That sign is the same for every state of the sector, so it is
+absorbed into the definition of F (it relabels p and nothing else); the sign of g = T_a F^f
+is then the translation sign of the flipped state. The two blocks of operators are never
+interleaved, so the up-block and down-block inversion counts simply add.
 
 **Matrix elements.** If a hop takes r to s with amplitude h (including the hopping sign),
-and T_b s = sigma |r'> with r' the representative of s, then
+and b s = sigma |r'> with r' the representative of s, then
 
-    <r', K| H |r, K> += h * sigma * exp(-i K.b) * sqrt(S_r' / S_r).
+    <r'; K, p| H |r; K, p> += h * sigma * chi(b) * sqrt(S_r' / S_r).
 
-The interaction and chemical-potential terms are diagonal and translation-invariant.
+The interaction and chemical-potential terms are diagonal and symmetric under the group.
 
-**Ground state.** Every block is solved. E0 is the lowest energy over all blocks, and
-observables are averaged uniformly over every ground state in every block, the same T -> 0+
-convention as ``ed``, so the two must agree exactly. Double occupancy is diagonal in the
-representative basis, because it is translation-invariant.
+**Scale.** For 16 sites each group element's action on one spin species (permuted bits and
+inversion parity) is precomputed as a 2^16-entry table, so canonicalizing a state is a
+handful of table lookups. The sector is processed in chunks with compact integer types, and
+the hopping graph is stored once in CSR form (rows = source representative) with a one-byte
+group-element code and a one-byte signed amplitude code per entry. Each sector only adds
+its own data array of phases. Representatives not allowed in a sector are masked out of the
+Lanczos vectors rather than copied away.
+
+**Ground state.** Every sector is solved. E0 is the lowest energy over all sectors, and
+observables are averaged uniformly over every ground state in every sector, the same
+T -> 0+ convention as ``ed``, so the two must agree exactly. Double occupancy is diagonal in
+the representative basis, because it is symmetric under the whole group.
+
+**Checkpoints.** With a checkpoint directory (``checkpoint_dir`` or the
+``SUPERCONDUCTOR_CHECKPOINT_DIR`` environment variable), each finished sector's summary is
+written to disk and later runs skip it. Results are identical with or without checkpoints;
+they only let runs of several hours survive interruptions.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 from math import comb
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -56,11 +79,13 @@ from superconductor.solvers.ed import (
 )
 
 DENSE_LIMIT = 2048
-MAX_STATES = 70_000_000  # full (N_up, N_dn) sector, enumerated once to find orbits
+TINY = 16  # sectors this small always use dense diagonalization
+MAX_STATES = 200_000_000  # full (N_up, N_dn) sector, enumerated once (in chunks) to find orbits
 MAX_SITES = 20
+CHUNK = 4_000_000  # states canonicalized per chunk
 
 
-# ----- translations, signs and orbits -------------------------------------------------------
+# ----- group elements, tables, orbits ---------------------------------------------------------
 
 
 def translations(lx: int, ly: int) -> tuple[list[tuple[int, int]], np.ndarray]:
@@ -75,186 +100,309 @@ def translations(lx: int, ly: int) -> tuple[list[tuple[int, int]], np.ndarray]:
     return shifts, np.array(perms)
 
 
-def _inversion_masks(perm: np.ndarray) -> np.ndarray:
-    """masks[i] = bit set of sites j > i with perm[i] > perm[j] (pairs inverted by the map)."""
-    n = len(perm)
-    masks = np.zeros(n, dtype=np.int64)
+def _species_tables(perm: np.ndarray, n: int) -> tuple[np.ndarray, np.ndarray]:
+    """For every n-bit occupation x: the permuted bits, and the parity of the reordering."""
+    x = np.arange(1 << n, dtype=np.int64)
+    out = np.zeros_like(x)
+    for i, p in enumerate(perm):
+        out |= ((x >> i) & 1) << int(p)
+    parity = np.zeros_like(x)
     for i in range(n):
+        mask = 0
         for j in range(i + 1, n):
             if perm[i] > perm[j]:
-                masks[i] |= 1 << j
-    return masks
-
-
-def _permute(bits: np.ndarray, perm: np.ndarray) -> np.ndarray:
-    out = np.zeros_like(bits)
-    for i, p in enumerate(perm):
-        out |= ((bits >> i) & 1) << int(p)
-    return out
-
-
-def _parity(bits: np.ndarray, masks: np.ndarray) -> np.ndarray:
-    inv = np.zeros(bits.shape, dtype=np.int64)
-    for i, m in enumerate(masks):
-        if m:
-            inv += ((bits >> i) & 1) * np.bitwise_count(bits & m).astype(np.int64)
-    return inv & 1
+                mask |= 1 << j
+        if mask:
+            parity += ((x >> i) & 1) * np.bitwise_count(x & mask).astype(np.int64)
+    key_dtype = np.uint32 if n <= 32 else np.int64
+    return out.astype(key_dtype), (parity & 1).astype(np.int8)
 
 
 class OrbitBasis:
-    """Translation orbits of a (N_up, N_dn) sector, and the hopping graph between them."""
+    """Orbits of a (N_up, N_dn) sector under translations (and spin flip), and the hop graph."""
 
-    def __init__(self, model: HubbardModel):
+    def __init__(self, model: HubbardModel, spin_flip: bool | None = None, chunk: int = CHUNK):
         lat = model.lattice
         self.n = n = lat.num_sites
-        self.shifts, self.perms = translations(lat.lx, lat.ly)
         self.lx, self.ly = lat.lx, lat.ly
-        masks = [_inversion_masks(p) for p in self.perms]
-        up_states = species_basis(n, model.filling.n_up).astype(np.int64)
-        dn_states = species_basis(n, model.filling.n_dn).astype(np.int64)
+        nu, nd = model.filling.n_up, model.filling.n_dn
+        self.spin_flip = (nu == nd) if spin_flip is None else bool(spin_flip and nu == nd)
+        self.shifts, perms = translations(lat.lx, lat.ly)
+        # Group elements: (translation index, flip). Element 0 is the identity.
+        self.elements = [
+            (a, f) for f in ((0, 1) if self.spin_flip else (0,)) for a in range(len(self.shifts))
+        ]
+        tables = [_species_tables(p, n) for p in perms]
+        self.key_bits = n
+        up_states = species_basis(n, nu).astype(np.int64)
+        dn_states = species_basis(n, nd).astype(np.int64)
         self.n_dn_states = len(dn_states)
         self.up_index = np.full(1 << n, -1, dtype=np.int64)
         self.up_index[up_states] = np.arange(len(up_states))
         self.dn_index = np.full(1 << n, -1, dtype=np.int64)
         self.dn_index[dn_states] = np.arange(len(dn_states))
+        total = len(up_states) * len(dn_states)
 
-        # Canonical form of every state: smallest key over all translations.
-        up = np.repeat(up_states, len(dn_states))
-        dn = np.tile(dn_states, len(up_states))
-        own_key = (up << n) | dn
-        best_key = own_key.copy()
-        best_shift = np.zeros(len(up), dtype=np.int8)
-        best_sign = np.ones(len(up), dtype=np.int8)
-        for a in range(1, len(self.shifts)):
-            tu, td = _permute(up, self.perms[a]), _permute(dn, self.perms[a])
-            key = (tu << n) | td
-            better = key < best_key
-            if better.any():
-                sign = 1 - 2 * ((_parity(up, masks[a]) + _parity(dn, masks[a])) & 1)
-                best_key[better] = key[better]
-                best_shift[better] = a
-                best_sign[better] = sign[better].astype(np.int8)
-        is_rep = best_key == own_key
-        self.rep_up, self.rep_dn = up[is_rep], dn[is_rep]
-        rep_keys = own_key[is_rep]
-        order = np.argsort(rep_keys)
-        self.rep_up, self.rep_dn, rep_keys = self.rep_up[order], self.rep_dn[order], rep_keys[order]
-        # For every state: which representative, via which translation, with which sign.
-        self.state_rep = np.searchsorted(rep_keys, best_key).astype(np.int64)
-        self.state_shift, self.state_sign = best_shift, best_sign
-        del up, dn, own_key, best_key
+        # Pass 1: canonical key, group element and sign of every state, chunk by chunk.
+        key_t = np.uint64
+        best_key = np.empty(total, dtype=key_t)
+        self.state_elem = np.empty(total, dtype=np.int8)
+        self.state_sign = np.empty(total, dtype=np.int8)
+        rows_per_chunk = max(1, chunk // max(1, len(dn_states)))
+        rep_keys = []
+        for start in range(0, len(up_states), rows_per_chunk):
+            ups = up_states[start : start + rows_per_chunk]
+            up = np.repeat(ups, len(dn_states))
+            dn = np.tile(dn_states, len(ups))
+            lo = start * len(dn_states)
+            own = (up.astype(key_t) << key_t(n)) | dn.astype(key_t)
+            best = own.copy()
+            elem = np.zeros(len(up), dtype=np.int8)
+            sign = np.ones(len(up), dtype=np.int8)
+            for g, (a, f) in enumerate(self.elements):
+                if g == 0:
+                    continue
+                perm_t, par_t = tables[a]
+                first, second = (dn, up) if f else (up, dn)
+                key = (perm_t[first].astype(key_t) << key_t(n)) | perm_t[second].astype(key_t)
+                better = key < best
+                if better.any():
+                    best[better] = key[better]
+                    elem[better] = g
+                    s = 1 - 2 * ((par_t[first[better]] + par_t[second[better]]) & 1)
+                    sign[better] = s.astype(np.int8)
+            best_key[lo : lo + len(up)] = best
+            self.state_elem[lo : lo + len(up)] = elem
+            self.state_sign[lo : lo + len(up)] = sign
+            rep_keys.append(own[best == own])
+        rep_keys = np.sort(np.concatenate(rep_keys))
+        # Pass 2: which representative each state belongs to.
+        self.state_rep = np.empty(total, dtype=np.int32)
+        for lo in range(0, total, chunk):
+            self.state_rep[lo : lo + chunk] = np.searchsorted(rep_keys, best_key[lo : lo + chunk])
+        del best_key
+        mask = (1 << n) - 1
+        self.rep_up = (rep_keys >> key_t(n)).astype(np.int64)
+        self.rep_dn = (rep_keys & key_t(mask)).astype(np.int64)
+        self.n_reps = len(rep_keys)
 
-        # Stabilizers of the representatives: translations mapping r to itself, and the sign.
-        g = len(self.shifts)
-        self.stab = np.zeros((len(rep_keys), g), dtype=bool)
-        self.stab_sign = np.ones((len(rep_keys), g), dtype=np.int8)
-        for a in range(g):
-            tu, td = _permute(self.rep_up, self.perms[a]), _permute(self.rep_dn, self.perms[a])
-            fixed = ((tu << n) | td) == rep_keys
-            self.stab[:, a] = fixed
-            sign = 1 - 2 * ((_parity(self.rep_up, masks[a]) + _parity(self.rep_dn, masks[a])) & 1)
-            self.stab_sign[:, a] = sign
+        # Stabilizers: which elements fix each representative, and with which sign.
+        n_g = len(self.elements)
+        self.stab = np.zeros((self.n_reps, n_g), dtype=bool)
+        self.stab_sign = np.ones((self.n_reps, n_g), dtype=np.int8)
+        for g, (a, f) in enumerate(self.elements):
+            perm_t, par_t = tables[a]
+            first, second = (self.rep_dn, self.rep_up) if f else (self.rep_up, self.rep_dn)
+            key = (perm_t[first].astype(key_t) << key_t(n)) | perm_t[second].astype(key_t)
+            self.stab[:, g] = key == rep_keys
+            self.stab_sign[:, g] = (1 - 2 * ((par_t[first] + par_t[second]) & 1)).astype(np.int8)
         self.stab_size = self.stab.sum(1)
         self.double = np.bitwise_count(self.rep_up & self.rep_dn).astype(float)
         self.diagonal = model.U * self.double - model.mu * model.filling.total
         self._build_hops(model)
+        # The per-state tables are only needed to build the hop graph.
+        del self.state_rep, self.state_elem, self.state_sign
 
-    def _state_index(self, up: np.ndarray, dn: np.ndarray) -> np.ndarray:
-        return self.up_index[up] * self.n_dn_states + self.dn_index[dn]
+    # ----- hop graph in CSR form (rows = source representative) ----------------------------
+
+    def _hop_terms(self, model: HubbardModel):
+        h = model.hopping_matrix()
+        values = sorted({float(abs(v)) for v in h[h != 0]})
+        self.amp_table = np.array([0.0] + values)  # code 0 unused; sign carried separately
+        pairs = []
+        for i, j in zip(*np.nonzero(h), strict=True):
+            if i != j:
+                code = values.index(float(abs(h[i, j]))) + 1
+                pairs.append((int(i), int(j), code * (1 if h[i, j] > 0 else -1)))
+        return pairs
+
+    def _targets(self, spin, i, j):
+        """Representatives that can hop j -> i in this spin, and where they land."""
+        bits = self.rep_up if spin == 0 else self.rep_dn
+        ok = np.flatnonzero((((bits >> j) & 1) == 1) & (((bits >> i) & 1) == 0))
+        b = bits[ok]
+        lo, hi = min(i, j), max(i, j)
+        between = b & (((1 << hi) - 1) ^ ((1 << (lo + 1)) - 1))
+        hop_sign = 1 - 2 * (np.bitwise_count(between).astype(np.int64) & 1)
+        new = b ^ (1 << j) ^ (1 << i)
+        up = new if spin == 0 else self.rep_up[ok]
+        dn = self.rep_dn[ok] if spin == 0 else new
+        s = self.up_index[up] * self.n_dn_states + self.dn_index[dn]
+        return ok, self.state_rep[s], self.state_elem[s], hop_sign * self.state_sign[s]
 
     def _build_hops(self, model: HubbardModel) -> None:
-        """Every hop from every representative: (from, to, translation, signed amplitude)."""
-        h = model.hopping_matrix()
-        pairs = [(i, j, h[i, j]) for i, j in zip(*np.nonzero(h), strict=True) if i != j]
-        frm, to, shift, amp = [], [], [], []
-        reps = np.arange(len(self.rep_up))
+        pairs = self._hop_terms(model)
+        counts = np.zeros(self.n_reps, dtype=np.int64)
         for spin in (0, 1):
             bits = self.rep_up if spin == 0 else self.rep_dn
-            for i, j, hij in pairs:
-                ok = (((bits >> j) & 1) == 1) & (((bits >> i) & 1) == 0)
-                if not ok.any():
-                    continue
-                b = bits[ok]
-                lo, hi = min(i, j), max(i, j)
-                between = b & (((1 << hi) - 1) ^ ((1 << (lo + 1)) - 1))
-                hop_sign = 1 - 2 * (np.bitwise_count(between).astype(np.int64) & 1)
-                new = b ^ (1 << j) ^ (1 << i)
-                up = new if spin == 0 else self.rep_up[ok]
-                dn = self.rep_dn[ok] if spin == 0 else new
-                s = self._state_index(up, dn)
-                frm.append(reps[ok])
-                to.append(self.state_rep[s])
-                shift.append(self.state_shift[s])
-                amp.append(hij * hop_sign * self.state_sign[s])
-        self.hop_from = np.concatenate(frm) if frm else np.zeros(0, dtype=np.int64)
-        self.hop_to = np.concatenate(to) if to else np.zeros(0, dtype=np.int64)
-        self.hop_shift = np.concatenate(shift) if shift else np.zeros(0, dtype=np.int8)
-        self.hop_amp = np.concatenate(amp).astype(float) if amp else np.zeros(0)
+            for i, j, _ in pairs:
+                counts += (((bits >> j) & 1) == 1) & (((bits >> i) & 1) == 0)
+        self.indptr = np.zeros(self.n_reps + 1, dtype=np.int64)
+        np.cumsum(counts, out=self.indptr[1:])
+        nnz = int(self.indptr[-1])
+        self.cols = np.empty(nnz, dtype=np.int32)
+        self.elem_code = np.empty(nnz, dtype=np.int8)
+        self.amp_code = np.empty(nnz, dtype=np.int8)
+        cursor = self.indptr[:-1].copy()
+        for spin in (0, 1):
+            for i, j, code in pairs:
+                frm, to, elem, sign = self._targets(spin, i, j)
+                pos = cursor[frm]
+                self.cols[pos] = to
+                self.elem_code[pos] = elem
+                self.amp_code[pos] = (code * sign).astype(np.int8)
+                cursor[frm] += 1
+        # Every sector's matrix shares these arrays. Freeze them: some SciPy operations
+        # (taking abs(), slicing, summing) "canonicalize" a CSR matrix in place, sorting and
+        # merging entries. On shared arrays that silently scrambled the structure for every
+        # later sector. Read-only arrays turn any such attempt into an immediate error.
+        for arr in (self.indptr, self.cols, self.elem_code, self.amp_code):
+            arr.flags.writeable = False
 
-    # ----- momentum blocks ----------------------------------------------------------------
+    # ----- sectors ---------------------------------------------------------------------------
 
-    def momenta(self) -> list[tuple[int, int]]:
-        """Momentum labels (mx, my): K = 2 pi (mx / Lx, my / Ly)."""
-        return [(mx, my) for my in range(self.ly) for mx in range(self.lx)]
+    def sectors(self) -> list[tuple[int, int, int]]:
+        """Sector labels (mx, my, p): K = 2 pi (mx / Lx, my / Ly), spin-flip parity p."""
+        parities = (1, -1) if self.spin_flip else (1,)
+        return [(mx, my, p) for p in parities for my in range(self.ly) for mx in range(self.lx)]
 
-    def _phases(self, m: tuple[int, int]) -> np.ndarray:
-        """exp(-i K . a) for every translation a."""
-        kx, ky = 2 * np.pi * m[0] / self.lx, 2 * np.pi * m[1] / self.ly
-        return np.array([np.exp(-1j * (kx * ax + ky * ay)) for ax, ay in self.shifts])
+    def momenta(self) -> list[tuple[int, int, int]]:  # kept for callers of the earlier API
+        return self.sectors()
 
-    def block(self, m: tuple[int, int]) -> tuple[sp.csr_matrix, np.ndarray]:
-        """Hamiltonian block at momentum m, and the indices of the representatives it uses."""
-        ph = self._phases(m)
-        # A representative survives if exp(-iK.b) sigma_b = 1 on its whole stabilizer.
-        compat = np.where(self.stab, ph[None, :] * self.stab_sign, 1.0)
-        allowed = np.all(np.abs(compat - 1.0) < 1e-9, axis=1)
-        reps = np.flatnonzero(allowed)
-        local = np.full(len(allowed), -1, dtype=np.int64)
-        local[reps] = np.arange(len(reps))
-        keep = allowed[self.hop_from] & allowed[self.hop_to]
-        f, t = local[self.hop_from[keep]], local[self.hop_to[keep]]
-        norm = np.sqrt(self.stab_size[self.hop_to[keep]] / self.stab_size[self.hop_from[keep]])
-        vals = self.hop_amp[keep] * ph[self.hop_shift[keep]] * norm
-        real = np.allclose(ph.imag, 0.0)
-        if real:
-            vals = vals.real
-        dim = len(reps)
-        ham = sp.csr_matrix((vals, (t, f)), shape=(dim, dim))
-        ham = ham + sp.diags(self.diagonal[reps].astype(ham.dtype))
-        return ham.tocsr(), reps
+    def characters(self, sector: tuple[int, int, int]) -> np.ndarray:
+        """chi(g) = exp(-i K . a) p^f for every group element g = T_a F^f."""
+        mx, my, p = sector
+        kx, ky = 2 * np.pi * mx / self.lx, 2 * np.pi * my / self.ly
+        return np.array(
+            [
+                np.exp(-1j * (kx * self.shifts[a][0] + ky * self.shifts[a][1])) * (p**f)
+                for a, f in self.elements
+            ]
+        )
 
+    def operator(self, sector: tuple[int, int, int]) -> SectorOperator:
+        return SectorOperator(self, sector)
 
-# ----- eigen-solver for a Hermitian block ----------------------------------------------------
+    def block(self, sector: tuple[int, int, int]) -> tuple[sp.csr_matrix, np.ndarray]:
+        """The sector Hamiltonian as an explicit sparse matrix over its allowed representatives
+        (for tests and small systems), and those representatives' indices."""
+        op = self.operator(sector)
+        return op.explicit(), op.allowed_indices
 
 
-def _hermitian_ground_manifold(ham: sp.csr_matrix, dense_limit: int):
-    """(E0, ground-manifold basis, Lanczos passes or None) for a real or complex block."""
-    dim = ham.shape[0]
-    if dim == 0:
+class SectorOperator:
+    """H restricted to one sector, applied matrix-free from the shared hop graph."""
+
+    def __init__(self, basis: OrbitBasis, sector: tuple[int, int, int]):
+        self.basis = basis
+        chi = basis.characters(sector)
+        compat = np.where(basis.stab, chi[None, :] * basis.stab_sign, 1.0)
+        self.allowed = np.all(np.abs(compat - 1.0) < 1e-9, axis=1)
+        self.allowed_indices = np.flatnonzero(self.allowed)
+        self.real = bool(np.allclose(chi.imag, 0.0))
+        self.dtype = np.float64 if self.real else np.complex128
+        # Entry (row = from, col = to) of H is conj(value(to <- from)) (H is Hermitian).
+        rows = np.repeat(np.arange(basis.n_reps, dtype=np.int32), np.diff(basis.indptr))
+        norm = np.sqrt(basis.stab_size[basis.cols] / basis.stab_size[rows])
+        amp = np.sign(basis.amp_code) * basis.amp_table[np.abs(basis.amp_code)]
+        phase = np.conj(chi)[basis.elem_code]
+        data = amp * norm * phase
+        keep = self.allowed[rows] & self.allowed[basis.cols]
+        data = np.where(keep, data, 0.0)
+        del rows, norm, amp, phase, keep
+        self.data = data.real if self.real else data
+        # Only ever used for matrix-vector products, which never modify the matrix.
+        self.matrix = sp.csr_matrix(
+            (self.data, basis.cols, basis.indptr), shape=(basis.n_reps, basis.n_reps)
+        )
+        self.diag = basis.diagonal.astype(self.dtype)
+        self.dim = int(self.allowed.sum())
+        self.shape = (basis.n_reps, basis.n_reps)
+
+    def __matmul__(self, v):
+        """Apply H; components on disallowed representatives are kept at zero."""
+        out = self.matrix @ v
+        if v.ndim == 1:
+            out += self.diag * v
+            out[~self.allowed] = 0
+        else:
+            out += self.diag[:, None] * v
+            out[~self.allowed, :] = 0
+        return out
+
+    def radius(self) -> float:
+        """Gershgorin bound on the spectral radius (NumPy only; see the note on freezing)."""
+        indptr = self.basis.indptr
+        row_sums = np.add.reduceat(np.abs(self.data), indptr[:-1]) if len(self.data) else 0
+        row_sums = np.where(np.diff(indptr) > 0, row_sums, 0.0)
+        return float(np.max(row_sums + np.abs(self.diag)))
+
+    def explicit(self) -> sp.csr_matrix:
+        """This sector as an explicit sparse matrix over its allowed representatives, built
+        from copies (for tests and small sectors)."""
+        b = self.basis
+        rows = np.repeat(np.arange(b.n_reps), np.diff(b.indptr))
+        local = np.full(b.n_reps, -1, dtype=np.int64)
+        local[self.allowed_indices] = np.arange(self.dim)
+        keep = self.allowed[rows] & self.allowed[b.cols]
+        m = sp.coo_matrix(
+            (self.data[keep], (local[rows[keep]], local[b.cols[keep]])), shape=(self.dim, self.dim)
+        ).tocsr()
+        return (m + sp.diags(self.diag[self.allowed_indices])).tocsr()
+
+
+# ----- eigen-solver for one sector -----------------------------------------------------------
+
+
+def _sector_ground_manifold(op: SectorOperator, dense_limit: int):
+    """(E0, ground-manifold basis over the full representative index, Lanczos passes or None)."""
+    if op.dim == 0:
         return None
-    if dim <= dense_limit:
-        energies, vectors = np.linalg.eigh(ham.toarray())
+    # ARPACK isn't reliable for tiny problems, so those always go dense.
+    if op.dim <= max(dense_limit, TINY):
+        energies, vectors = np.linalg.eigh(op.explicit().toarray())
         tol = _DEGENERACY_RTOL * max(1.0, abs(energies[0]))
         ground = np.abs(energies - energies[0]) <= tol
-        return float(energies[0]), vectors[:, ground], None
+        full = np.zeros((op.shape[0], int(ground.sum())), dtype=vectors.dtype)
+        full[op.allowed_indices] = vectors[:, ground]
+        return float(energies[0]), full, None
+    # Lanczos runs on the allowed representatives only. (Masking them inside the full index
+    # space let ARPACK restarts leak into the masked coordinates, which act as spurious
+    # zero-energy directions, and the eigenvectors failed their residual check.)
+    idx = op.allowed_indices
+    n_full, dim = op.shape[0], op.dim
+
+    def apply(small):
+        full = np.zeros((n_full,) + small.shape[1:], dtype=op.dtype)
+        full[idx] = small
+        return (op @ full)[idx]
+
     rng = np.random.default_rng(0)
-    radius = float(np.abs(ham).sum(axis=1).max())
-    shift = 4.0 * radius + 1.0
-    basis = np.zeros((dim, 0), dtype=ham.dtype)
+    shift = 4.0 * op.radius() + 1.0
+    basis = np.zeros((dim, 0), dtype=op.dtype)
     e0, passes = None, 0
     while basis.shape[1] <= MAX_DEGENERACY:
+        if basis.shape[1] >= dim - 1:
+            # The degenerate manifold (nearly) fills the sector: finish densely on what's
+            # left, since a Lanczos pass on 0 or 1 remaining directions can't be trusted.
+            energies, vectors = np.linalg.eigh(op.explicit().toarray())
+            tol = _DEGENERACY_RTOL * max(1.0, abs(energies[0]))
+            ground = np.abs(energies - energies[0]) <= tol
+            full = np.zeros((n_full, int(ground.sum())), dtype=op.dtype)
+            full[idx] = vectors[:, ground]
+            return float(energies[0]), full, passes
         passes += 1
         q = basis
 
         def matvec(v, q=q):
             v = np.ravel(v)
-            return ham @ v + shift * (q @ (q.conj().T @ v))
+            return apply(v) + shift * (q @ (q.conj().T @ v))
 
-        op = LinearOperator((dim, dim), matvec=matvec, dtype=ham.dtype)
-        v0 = rng.standard_normal(dim).astype(ham.dtype)
-        vals, vecs = eigsh(op, k=1, which="SA", v0=v0, tol=_LANCZOS_TOL)
+        lin = LinearOperator((dim, dim), matvec=matvec, dtype=op.dtype)
+        v0 = rng.standard_normal(dim).astype(op.dtype)
+        vals, vecs = eigsh(lin, k=1, which="SA", v0=v0, tol=_LANCZOS_TOL)
         val, vec = float(vals[0].real), vecs[:, 0]
-        residual = np.linalg.norm(ham @ vec - val * vec)
+        residual = np.linalg.norm(apply(vec) - val * vec)
         if residual > _RESIDUAL_TOL * max(1.0, abs(val)):
             raise RuntimeError(f"Lanczos did not converge (residual {residual:.2e})")
         tol = _DEGENERACY_RTOL * max(1.0, abs(val if e0 is None else e0))
@@ -263,7 +411,9 @@ def _hermitian_ground_manifold(ham: sp.csr_matrix, dense_limit: int):
         elif val < e0 - tol:
             raise RuntimeError("Lanczos missed the ground state on its first pass")
         elif val > e0 + tol:
-            return e0, basis, passes
+            full = np.zeros((n_full, basis.shape[1]), dtype=op.dtype)
+            full[idx] = basis
+            return e0, full, passes
         vec = vec - basis @ (basis.conj().T @ vec)
         basis = np.column_stack([basis, vec / np.linalg.norm(vec)])
     raise RuntimeError(f"ground-state degeneracy exceeds {MAX_DEGENERACY}")
@@ -272,28 +422,33 @@ def _hermitian_ground_manifold(ham: sp.csr_matrix, dense_limit: int):
 _SHARED: dict[str, Any] = {}  # basis shared with forked worker processes (copy-on-write)
 
 
-def _solve_block(m: tuple[int, int]):
-    """Solve one momentum block and summarize it; the block matrix is discarded afterwards.
+def _solve_sector(sector):
+    """Solve one sector and summarize it; its matrix data is discarded afterwards.
 
-    Returns (m, E0 of block, dimension, sum of <D> over the block's ground manifold,
-    number of ground states, max residual), or None for an empty block.
+    Returns [sector, E0, dimension, sum of <D> over the ground manifold, number of ground
+    states, max residual], or None for an empty sector. Writes a checkpoint if configured.
     """
-    basis, dense_limit = _SHARED["basis"], _SHARED["dense_limit"]
-    ham, reps = basis.block(m)
-    found = _hermitian_ground_manifold(ham, dense_limit)
+    basis, dense_limit, ckpt = _SHARED["basis"], _SHARED["dense_limit"], _SHARED["checkpoint"]
+    op = basis.operator(sector)
+    found = _sector_ground_manifold(op, dense_limit)
     if found is None:
-        return None
-    e, vecs, _ = found
-    d_sum = float(((np.abs(vecs) ** 2).T @ basis.double[reps]).sum())
-    residual = float(np.linalg.norm(ham @ vecs - e * vecs, axis=0).max())
-    return m, e, ham.shape[0], d_sum, vecs.shape[1], residual
+        summary = None
+    else:
+        e, vecs, _ = found
+        d_sum = float(((np.abs(vecs) ** 2).T @ basis.double).sum())
+        residual = float(np.linalg.norm(op @ vecs - e * vecs, axis=0).max())
+        summary = [list(sector), e, op.dim, d_sum, int(vecs.shape[1]), residual]
+    if ckpt is not None:
+        path = ckpt / f"sector_{sector[0]}_{sector[1]}_{sector[2]}.json"
+        path.write_text(json.dumps({"summary": summary}))
+    return summary
 
 
 class MomentumED(Solver):
-    """Exact diagonalization block by block in total momentum (periodic lattices).
+    """Exact diagonalization block by block in total momentum (and spin-flip parity).
 
-    ``workers`` > 1 solves momentum blocks in parallel processes (Linux/macOS fork); results
-    are identical, only wall time changes. It defaults to the ``SUPERCONDUCTOR_WORKERS``
+    ``workers`` > 1 solves sectors in parallel processes (Linux/macOS fork); results are
+    identical, only wall time changes. It defaults to the ``SUPERCONDUCTOR_WORKERS``
     environment variable (else 1), so commands such as ``superconductor submit`` can use it.
 
     Start Python with ``OPENBLAS_NUM_THREADS=1`` (or ``OMP_NUM_THREADS=1``) when using
@@ -303,15 +458,23 @@ class MomentumED(Solver):
     """
 
     name = "ed-k"
-    version = "0.1.0"
+    version = "0.2.0"
 
-    def __init__(self, dense_limit: int = DENSE_LIMIT, workers: int | None = None):
+    def __init__(
+        self,
+        dense_limit: int = DENSE_LIMIT,
+        workers: int | None = None,
+        spin_flip: bool = True,
+        checkpoint_dir: str | os.PathLike | None = None,
+    ):
         self.dense_limit = dense_limit
         if workers is None:  # e.g. for `superconductor submit`, which builds solvers by name
-            import os
-
             workers = int(os.environ.get("SUPERCONDUCTOR_WORKERS", "1"))
         self.workers = max(1, workers)
+        self.spin_flip = spin_flip
+        if checkpoint_dir is None:
+            checkpoint_dir = os.environ.get("SUPERCONDUCTOR_CHECKPOINT_DIR") or None
+        self.checkpoint_dir = Path(checkpoint_dir) if checkpoint_dir else None
 
     def applicability(self, model: HubbardModel) -> str | None:
         lat = model.lattice
@@ -334,73 +497,102 @@ class MomentumED(Solver):
         return {
             "dense_limit": self.dense_limit,
             "max_states": MAX_STATES,
+            "spin_flip": self.spin_flip,
             "degeneracy_rtol": _DEGENERACY_RTOL,
             "residual_tol": _RESIDUAL_TOL,
             "lanczos_tol": _LANCZOS_TOL,
             "max_degeneracy": MAX_DEGENERACY,
-        }  # workers is deliberately absent: it changes wall time, never the result
+        }  # workers and checkpoints are deliberately absent: they change wall time, never results
+
+    def _group_size(self, model: HubbardModel) -> int:
+        flip = self.spin_flip and model.filling.n_up == model.filling.n_dn
+        return model.num_sites * (2 if flip else 1)
 
     def estimate(self, model: HubbardModel) -> CostEstimate:
-        """Memory falls by about the number of translations G; total time stays close to ED's,
-        because the blocks together have as many non-zeros as the full sector. Enumerating the
-        orbits costs about G passes over the full sector. Each parallel worker holds its own
-        block, so block memory scales with ``workers``. Ignoring that let a 4-worker 4x4 run
-        with t' != 0 exceed 15 GB, which is how this was found."""
+        """Memory falls by about the group size G; total time stays close to ED's, because the
+        sectors together have as many non-zeros as the full sector. Each parallel worker holds
+        its own sector data and Lanczos vectors, so that part scales with ``workers``. (Ignoring
+        that once let a 4-worker 4x4 run with t' != 0 exceed 15 GB.)"""
         reason = self.applicability(model)
         dim = sector_dimension(model)
-        g = model.num_sites
+        g = self._group_size(model)
         nnz = estimated_nonzeros(model)
-        n = model.num_sites
-        enumerate_s = 3e-9 * dim * g * 4 * n
-        block_nnz = nnz / g
-        seconds = COST["base_seconds"] + enumerate_s + 1.5 * COST["lanczos_seconds_per_nnz"] * nnz
-        # The basis and hop graph live once (shared with forked workers); every worker builds
-        # and holds its own block at the same time.
-        memory = 40.0 * dim + 30.0 * nnz / g
-        memory += self.workers * 3 * COST["sparse_bytes_per_nnz"] * block_nnz
+        block_dim, block_nnz = dim / g, nnz / g
+        # Enumeration: about 2 table lookups per group element per state.
+        seconds = (
+            COST["base_seconds"] + 2.5e-9 * dim * g + 1.5 * COST["lanczos_seconds_per_nnz"] * nnz
+        )
+        shared = 7.0 * dim + 6.0 * block_nnz + g * block_dim + 16.0 * block_dim
+        per_worker = 16.0 * block_nnz + 30 * 16.0 * block_dim
+        memory = shared + self.workers * per_worker
         return CostEstimate(
             solver=self.name,
             feasible=reason is None,
             seconds=seconds,
             memory_bytes=memory,
-            driver=f"sector {dim:,} states in {g} momentum blocks of about {dim // g:,}",
+            driver=f"sector {dim:,} states in {g} symmetry blocks of about {int(block_dim):,}",
             reason=reason,
-            details={"sector_dimension": dim, "blocks": g, "block_dimension": dim // g},
+            details={"sector_dimension": dim, "blocks": g, "block_dimension": int(block_dim)},
         )
 
+    def _checkpoint_dir(self, model: HubbardModel) -> Path | None:
+        if self.checkpoint_dir is None:
+            return None
+        settings = json.dumps(self.settings(), sort_keys=True)
+        tag = hashlib.sha256((model.fingerprint() + self.version + settings).encode()).hexdigest()
+        path = self.checkpoint_dir / f"ed-k-{tag[:16]}"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
     def _solve(self, model: HubbardModel) -> tuple[dict[str, Observable], dict[str, Any]]:
-        basis = OrbitBasis(model)
-        _SHARED["basis"], _SHARED["dense_limit"] = basis, self.dense_limit
+        ckpt = self._checkpoint_dir(model)
+        basis = OrbitBasis(model, spin_flip=self.spin_flip)
+        sectors = basis.sectors()
+        done = {}
+        if ckpt is not None:
+            for s in sectors:
+                path = ckpt / f"sector_{s[0]}_{s[1]}_{s[2]}.json"
+                if path.exists():
+                    done[s] = json.loads(path.read_text())["summary"]
+        todo = [s for s in sectors if s not in done]
+        _SHARED.update(basis=basis, dense_limit=self.dense_limit, checkpoint=ckpt)
         try:
-            momenta = basis.momenta()
-            if self.workers > 1:
+            if self.workers > 1 and len(todo) > 1:
                 import multiprocessing as mp
                 from concurrent.futures import ProcessPoolExecutor
 
                 ctx = mp.get_context("fork")
                 with ProcessPoolExecutor(max_workers=self.workers, mp_context=ctx) as pool:
-                    blocks = list(pool.map(_solve_block, momenta))
+                    fresh = list(pool.map(_solve_sector, todo))
             else:
-                blocks = [_solve_block(m) for m in momenta]
+                fresh = [_solve_sector(s) for s in todo]
         finally:
             _SHARED.clear()
-        blocks = [b for b in blocks if b is not None]
-        e0 = min(b[1] for b in blocks)
+        summaries = [b for b in list(done.values()) + fresh if b is not None]
+        e0 = min(b[1] for b in summaries)
         tol = _DEGENERACY_RTOL * max(1.0, abs(e0))
-        ground = [b for b in blocks if b[1] <= e0 + tol]
+        ground = [b for b in summaries if b[1] <= e0 + tol]
         count = sum(b[4] for b in ground)
         d_total = sum(b[3] for b in ground) / count
+
+        def label(b):
+            return ",".join(str(v) for v in b[0])
+
         observables = standard_observables(model, e0, d_total)
         metadata = {
             "sector_dimension": sector_dimension(model),
-            "orbits": int(len(basis.rep_up)),
-            "block_dimensions": {f"{b[0][0]},{b[0][1]}": int(b[2]) for b in blocks},
-            "block_ground_energies": {f"{b[0][0]},{b[0][1]}": b[1] for b in blocks},
-            "ground_momenta": [[int(b[0][0]), int(b[0][1])] for b in ground],
+            "orbits": int(basis.n_reps),
+            "spin_flip": basis.spin_flip,
+            "block_dimensions": {label(b): int(b[2]) for b in summaries},
+            "block_ground_energies": {label(b): b[1] for b in summaries},
+            "ground_momenta": sorted({(int(b[0][0]), int(b[0][1])) for b in ground}),
+            "ground_sectors": [list(map(int, b[0])) for b in ground],
             "ground_state_degeneracy": int(count),
             "max_residual": max(b[5] for b in ground),
-            "method": "momentum blocks",
+            "method": "symmetry blocks"
+            + (" (momentum, spin flip)" if basis.spin_flip else " (momentum)"),
         }
+        metadata["ground_momenta"] = [list(m) for m in metadata["ground_momenta"]]
         return observables, metadata
 
 
