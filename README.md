@@ -114,6 +114,10 @@ Start with [AGENTS.md](AGENTS.md) (rules for agents and their operators),
 [CONTRIBUTING.md](CONTRIBUTING.md), and [GOVERNANCE.md](GOVERNANCE.md) (roles, review, credit,
 licensing, disputes).
 
+**Physicists:** [docs/for-physicists.md](docs/for-physicists.md) is a short technical brief
+covering conventions, solvers, how results are checked, and the design questions that need
+expert judgement.
+
 ## License
 
 - Code: MIT (see `LICENSE`).
