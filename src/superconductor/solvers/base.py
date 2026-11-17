@@ -10,6 +10,9 @@ methods can be compared automatically:
 - ``kinetic_energy``: <H_kin>
 - ``double_occupancy``: (1/N) sum_i <n_{i,up} n_{i,dn}>
 
+Every result's metadata also carries ``solver_settings``: the solver's numerical settings
+(see ``Solver.settings``), kept separate from the physical parameters in the model.
+
 At T = 0 with a degenerate ground state, observables are averaged uniformly over the ground
 manifold (the T -> 0+ limit), so they are well defined regardless of which basis a solver
 happens to pick inside that manifold.
@@ -100,6 +103,14 @@ class Solver(ABC):
         """Return ``None`` if this solver can handle ``model``, otherwise a reason why not."""
         return None
 
+    def settings(self) -> dict[str, Any]:
+        """Numerical settings that affect accuracy (tolerances, method switches, sample counts).
+
+        These are about *how* the solver ran, never about the physics, which lives entirely in
+        the model. ``solve`` records them in every result under ``metadata["solver_settings"]``.
+        """
+        return {}
+
     def estimate(self, model: HubbardModel) -> CostEstimate:
         """Predict time and memory for ``model``. The default knows nothing about cost."""
         reason = self.applicability(model)
@@ -119,6 +130,7 @@ class Solver(ABC):
         if reason is not None:
             raise NotApplicableError(f"{self.name}: {reason}")
         observables, metadata = self._solve(model)
+        metadata = {**metadata, "solver_settings": self.settings()}
         return Result(
             solver=self.name,
             solver_version=self.version,

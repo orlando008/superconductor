@@ -91,6 +91,8 @@ provide the pieces needed for the first round, which uses ED/DQMC numerics as hi
 
 - ✅ `AGENTS.md`, `GOVERNANCE.md`, `CONTRIBUTING.md`, issue and PR templates, `CODEOWNERS`
 - ✅ Public website explaining the project (`site/`, deployed to GitHub Pages)
+- ✅ Results record their numerical settings, convergence diagnostics (e.g. ED residuals and
+  Lanczos passes) and hardware; reproductions with different settings get flagged
 - ✅ Results registry: append-only, content-addressed submissions and reproductions;
   computed verification status; CI validation with re-runs of cheap results
 - ✅ CI check that every added record's `contributor.handle` matches the PR author

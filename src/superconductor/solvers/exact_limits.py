@@ -94,6 +94,9 @@ class FreeFermions(Solver):
     name = "free"
     version = "0.2.0"
 
+    def settings(self) -> dict[str, Any]:
+        return {"shell_tolerance": _SHELL_TOL}
+
     def applicability(self, model: HubbardModel) -> str | None:
         if model.U != 0.0:
             return "requires U = 0"

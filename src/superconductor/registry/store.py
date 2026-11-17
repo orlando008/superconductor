@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import platform
 import subprocess
 from dataclasses import dataclass, field
@@ -216,6 +217,28 @@ def validate_registry(reg: Registry, reproduce: bool = False) -> list[Finding]:
                 findings.append(
                     Finding("warning", p, "disputed", f"disagrees with submission {sid}")
                 )
+            if (
+                rep.provenance.solver == sub.provenance.solver
+                and rep.provenance.solver_settings
+                and sub.provenance.solver_settings
+                and rep.provenance.solver_settings != sub.provenance.solver_settings
+            ):
+                changed = sorted(
+                    k
+                    for k in set(rep.provenance.solver_settings)
+                    | set(sub.provenance.solver_settings)
+                    if rep.provenance.solver_settings.get(k)
+                    != sub.provenance.solver_settings.get(k)
+                )
+                findings.append(
+                    Finding(
+                        "warning",
+                        p,
+                        "different-settings",
+                        f"same solver as submission {sid} but different numerical settings: "
+                        f"{', '.join(changed)} (fine if deliberate, e.g. a convergence check)",
+                    )
+                )
     return findings
 
 
@@ -236,16 +259,41 @@ def _git_commit() -> str | None:
         return None
 
 
-def current_provenance(solver_name: str, solver_version: str, **extra) -> Provenance:
+def _hardware() -> dict[str, str]:
+    """Best-effort description of the machine: CPU model, core count, BLAS library."""
+    info = {"machine": platform.machine() or "unknown", "cpu_count": str(os.cpu_count() or "?")}
+    cpu = platform.processor()
+    try:
+        with open("/proc/cpuinfo") as fh:
+            for line in fh:
+                if line.startswith("model name"):
+                    cpu = line.split(":", 1)[1].strip()
+                    break
+    except OSError:
+        pass
+    info["cpu"] = cpu or "unknown"
+    try:
+        blas = np.show_config(mode="dicts")["Build Dependencies"]["blas"]
+        info["blas"] = f"{blas.get('name', '?')} {blas.get('version', '')}".strip()
+    except Exception:  # noqa: BLE001 - NumPy's config format varies between versions
+        info["blas"] = "unknown"
+    return info
+
+
+def current_provenance(
+    solver_name: str, solver_version: str, solver_settings: dict | None = None, **extra
+) -> Provenance:
     return Provenance(
         package_version=superconductor.__version__,
         git_commit=_git_commit(),
         solver=solver_name,
         solver_version=solver_version,
+        solver_settings=dict(solver_settings or {}),
         environment={
             "python": platform.python_version(),
             "numpy": np.__version__,
             "scipy": scipy.__version__,
+            **_hardware(),
         },
         **extra,
     )
@@ -262,7 +310,9 @@ def create_submission(
         contributor=contributor,
         model=model,
         result=ResultRecord.from_result(result),
-        provenance=current_provenance(solver.name, solver.version),
+        provenance=current_provenance(
+            solver.name, solver.version, result.metadata.get("solver_settings")
+        ),
         notes=notes,
     )
 
@@ -281,7 +331,9 @@ def create_reproduction(
         created=date.today(),
         contributor=contributor,
         result=ResultRecord.from_result(result),
-        provenance=current_provenance(solver.name, solver.version),
+        provenance=current_provenance(
+            solver.name, solver.version, result.metadata.get("solver_settings")
+        ),
         notes=notes,
     )
 
