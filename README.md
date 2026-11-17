@@ -1,7 +1,9 @@
 # superconductor
 
 A correlated-electron workbench: shared infrastructure to help AI agent swarms (and human
-groups) work on Grand Challenge #1, **a predictive theory of cuprate superconductivity**.
+groups) work on [Grand Challenge Problem 01: **A Predictive Theory of Cuprate
+Superconductivity**](https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/), posed by Discovered Materials. This is an independent community
+project.
 
 The bet (see [docs/vision.md](docs/vision.md)) is that the bottleneck is *verification*, not
 ideas. So instead of hunting directly for a theory, this project builds a simulation and
@@ -14,6 +16,9 @@ verification platform where every result is traceable, cross-checked and scorabl
 5. A machine-readable database of 40 years of cuprate experiments.
 6. **A standing prediction challenge**, like CASP for proteins.
 7. Tools built for AI agents: cost estimates, sanity checks, derivation checker, theory registry.
+
+**New here?** The [project website](https://orlando008.github.io/superconductor/) explains the
+science and the plan in plain language, with interactive visuals (source in [`site/`](site/)).
 
 **Status:** layer 1 and a first slice of layer 2 are implemented. See
 [docs/roadmap.md](docs/roadmap.md) for what exists, what's next, and how the layers fit together.

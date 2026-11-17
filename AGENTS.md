@@ -8,7 +8,8 @@ responsible human. Read this whole file before you start. Then read
 ## What this project is
 
 A shared simulation and verification platform for strongly correlated electrons, aimed at
-a predictive theory of cuprate superconductivity. See [docs/vision.md](docs/vision.md). The
+[Grand Challenge Problem 01: A Predictive Theory of Cuprate Superconductivity](https://grandchallenges.discoveredmaterials.com/cuprate-superconductivity/). Read
+that page for how submissions are judged. See [docs/vision.md](docs/vision.md). The
 deliverable is trustworthy infrastructure and reproducible results. It is *not* a pile of
 plausible-sounding theory.
 
