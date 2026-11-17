@@ -177,5 +177,58 @@ def standard_suite() -> list[HubbardModel]:
     return models
 
 
+def hamiltonian_suite() -> list[HubbardModel]:
+    """Models whose ED Hamiltonian is checked against the independent reference construction.
+
+    Generic interacting models (t, t', U, mu all non-zero) on every boundary type and on
+    directions of length 1, 2 and 3, including the doubled-bond case of periodic length 2,
+    plus the distinct physics of the standard suite (temperature doesn't change H).
+    """
+    from superconductor.validation.reference import MAX_REFERENCE_SITES
+
+    lattices = [
+        SquareLattice(lx=1, ly=3),
+        SquareLattice(lx=2, ly=1),
+        SquareLattice(lx=2, ly=1, boundary_x="open"),
+        SquareLattice(lx=3, ly=1),
+        SquareLattice(lx=2, ly=2),
+        SquareLattice(lx=2, ly=2, boundary_x="open"),
+        SquareLattice(lx=2, ly=3),
+        SquareLattice(lx=3, ly=2, boundary_y="open"),
+        SquareLattice(lx=2, ly=3, boundary_x="open", boundary_y="open"),
+        SquareLattice(lx=4, ly=2),
+    ]
+    models: dict[str, HubbardModel] = {}
+    for lat in lattices:
+        n = lat.num_sites
+        for nu, nd in {(1, 1), (n // 2, max(n // 2 - 1, 0)), (n // 2, n // 2), (n // 2 + 1, 1)}:
+            if nu > n or nd > n:
+                continue
+            bc = lat.boundary_x[0] + lat.boundary_y[0]
+            m = HubbardModel(
+                name=f"generic {lat.lx}x{lat.ly} {bc} ({nu},{nd})",
+                lattice=lat,
+                t=1.0,
+                t_prime=-0.35,
+                U=5.5,
+                mu=0.4,
+                filling=Filling(n_up=nu, n_dn=nd),
+            )
+            models[m.fingerprint()] = m
+    for m in standard_suite():
+        if m.num_sites <= MAX_REFERENCE_SITES:
+            ground = m.with_updates(temperature=0.0)
+            models.setdefault(ground.fingerprint(), ground)
+    return list(models.values())
+
+
+def run_hamiltonian_checks(models: Iterable[HubbardModel] | None = None) -> list:
+    """Compare ED's Hamiltonian with the independent reference for each model."""
+    from superconductor.solvers.ed import build_hamiltonian
+    from superconductor.validation.reference import compare_with
+
+    return [compare_with(m, build_hamiltonian(m)[0]) for m in (models or hamiltonian_suite())]
+
+
 def run_suite(models: Iterable[HubbardModel] | None = None, **kwargs) -> list[CrossCheckReport]:
     return [crosscheck(m, **kwargs) for m in (models or standard_suite())]

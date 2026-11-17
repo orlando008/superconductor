@@ -5,13 +5,29 @@ from superconductor.validation.crosscheck import (
     CrossCheckReport,
     compare_results,
     crosscheck,
+    hamiltonian_suite,
+    run_hamiltonian_checks,
     run_suite,
     standard_suite,
+)
+from superconductor.validation.reference import (
+    HamiltonianCheck,
+    compare_with,
+    reference_free_ground_state,
+    reference_hamiltonian,
+    reference_hopping,
 )
 from superconductor.validation.sanity import CheckOutcome, sanity_check
 
 __all__ = [
     "CheckOutcome",
+    "HamiltonianCheck",
+    "compare_with",
+    "hamiltonian_suite",
+    "reference_free_ground_state",
+    "reference_hamiltonian",
+    "reference_hopping",
+    "run_hamiltonian_checks",
     "Comparison",
     "CrossCheckReport",
     "compare_results",
