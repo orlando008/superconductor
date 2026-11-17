@@ -27,11 +27,12 @@ science and the plan in plain language, with interactive visuals (source in [`si
 
 - `HubbardModel`: a validated, versioned, JSON-serializable t-t'-U Hubbard model spec on a
   square lattice, with a content fingerprint that every result records.
-- Three solvers behind one `Solver` interface:
+- Four solvers behind one `Solver` interface:
   - `ed`: exact diagonalization (dense, or Lanczos with a check that the degenerate ground
     manifold is complete), ground state and finite temperature
   - `free`: exact solution at U = 0
   - `atomic`: exact solution at t = t' = 0
+  - `bethe`: exact ground states of periodic 1D chains at any U (Lieb–Wu Bethe ansatz)
 - Automatic cross-validation (`crosscheck`) across a standard suite of models, plus rigorous
   sanity checks on every result (double-occupancy bounds, free-fermion energy bounds).
 - A results registry: `submit`, `reproduce`, `validate` and `status` commands for

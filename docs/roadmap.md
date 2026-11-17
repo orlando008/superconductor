@@ -47,7 +47,10 @@ Implemented in `superconductor.solvers` and `superconductor.validation`.
 - ✅ Perturbative limits (`validation/perturbative.py`): weak coupling (remainder ≤ 0 and
   ∝ U²) and strong coupling at half filling (Heisenberg with J = 4t²/U, remainder ∝ U⁻³),
   run by `superconductor crosscheck`
-- ⬜ More exact references: Bethe ansatz (1D Lieb–Wu), high-temperature series expansion
+- ✅ Bethe ansatz (Lieb–Wu) solver for periodic 1D chains at any U > 0, up to half filling,
+  checked against ED on rings up to 10 sites (including higher-spin and open-shell ground
+  states) and reaching chains far beyond ED
+- ⬜ More exact references: high-temperature series expansion
 - ⬜ Wrappers: ALF (DQMC), TRIQS (DMFT/CDMFT), ITensor/TeNPy (DMRG), NetKet (NQS), diagMC
 - ⬜ Observables beyond energy/double occupancy: spin/charge correlations, pairing
   correlations (d-wave), Green's functions, spectral functions
