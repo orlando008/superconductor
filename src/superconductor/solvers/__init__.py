@@ -13,11 +13,12 @@ from superconductor.solvers.base import (
     Solver,
     standard_observables,
 )
+from superconductor.solvers.bethe import BetheAnsatz
 from superconductor.solvers.ed import ExactDiagonalization
 from superconductor.solvers.exact_limits import AtomicLimit, FreeFermions
 
 _REGISTRY: dict[str, type[Solver]] = {
-    cls.name: cls for cls in (ExactDiagonalization, FreeFermions, AtomicLimit)
+    cls.name: cls for cls in (ExactDiagonalization, FreeFermions, AtomicLimit, BetheAnsatz)
 }
 
 
@@ -42,6 +43,7 @@ def list_solvers() -> list[str]:
 
 __all__ = [
     "AtomicLimit",
+    "BetheAnsatz",
     "CostEstimate",
     "ExactDiagonalization",
     "FreeFermions",

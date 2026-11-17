@@ -18,4 +18,4 @@ def test_fingerprint_and_solvers(capsys):
     assert main(["fingerprint", str(EXAMPLES / "hubbard_4x2_hole_doped.json")]) == 0
     assert capsys.readouterr().out.startswith("sha256:")
     assert main(["solvers"]) == 0
-    assert set(capsys.readouterr().out.split()) == {"atomic", "ed", "free"}
+    assert set(capsys.readouterr().out.split()) == {"atomic", "bethe", "ed", "free"}

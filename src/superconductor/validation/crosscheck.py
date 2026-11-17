@@ -88,7 +88,8 @@ def standard_suite() -> list[HubbardModel]:
     Covers U = 0 (ED vs free fermions) and t = t' = 0 (ED vs atomic limit) across lattice
     shapes, boundary conditions, fillings, open and closed shells, and nonzero t' and mu.
     Both exact limits are also checked at finite temperature (energy, double occupancy, free
-    energy, entropy), and the atomic limit at attractive U.
+    energy, entropy), and the atomic limit at attractive U. Interacting 1D rings are checked
+    against the exact Bethe ansatz at any U.
     """
     lattices = [
         SquareLattice(lx=2, ly=1, boundary_x="open"),
@@ -174,6 +175,28 @@ def standard_suite() -> list[HubbardModel]:
                             filling=Filling(n_up=nu, n_dn=nd),
                         )
                     )
+    # Interacting 1D rings: ED against the exact Bethe ansatz, at any U. Covers closed and
+    # open shells, ground states with higher total spin, and (at L = 10) ED's Lanczos path.
+    rings = [
+        (4, [(1, 1), (2, 1), (2, 2)], (1.0, 6.0)),
+        (6, [(2, 1), (2, 2), (3, 1), (3, 3)], (4.0,)),
+        (6, [(3, 3)], (0.5, 12.0)),
+        (8, [(2, 2), (3, 2)], (3.0,)),
+        (10, [(5, 5)], (4.0,)),
+    ]
+    for length, fillings_1d, us in rings:
+        for nu, nd in fillings_1d:
+            for U in us:
+                models.append(
+                    HubbardModel(
+                        name=f"ring L={length} ({nu},{nd}) U={U:g}",
+                        lattice=SquareLattice(lx=length, ly=1),
+                        t=1.0,
+                        U=U,
+                        mu=0.1,
+                        filling=Filling(n_up=nu, n_dn=nd),
+                    )
+                )
     return models
 
 
