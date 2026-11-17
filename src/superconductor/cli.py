@@ -1,23 +1,100 @@
 """Command-line entry point for the workbench.
 
-Commands: solve, crosscheck, fingerprint, solvers, submit, reproduce, validate, status,
-check-authorship.
+Commands: solve, estimate, crosscheck, fingerprint, solvers, submit, reproduce, validate,
+status, check-authorship.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from superconductor.model import load_model
-from superconductor.solvers import get_solver, list_solvers
+from superconductor.solvers import CostEstimate, get_solver, list_solvers
 from superconductor.validation import run_suite, sanity_check
+
+DEFAULT_BUDGET_SECONDS = 600.0
+DEFAULT_BUDGET_GB = 8.0
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ[name])
+    except (KeyError, ValueError):
+        return default
+
+
+def _fmt_seconds(s: float | None) -> str:
+    if s is None:
+        return "unknown"
+    if s < 1:
+        return "under a second"
+    if s < 120:
+        return f"{s:.0f} s"
+    if s < 7200:
+        return f"{s / 60:.0f} min"
+    if s < 2 * 86400:
+        return f"{s / 3600:.1f} h"
+    return f"{s / 86400:.0f} days"
+
+
+def _fmt_bytes(b: float | None) -> str:
+    if b is None:
+        return "unknown"
+    for unit, size in (("TB", 1e12), ("GB", 1e9), ("MB", 1e6), ("kB", 1e3)):
+        if b >= size:
+            return f"{b / size:.1f} {unit}"
+    return f"{b:.0f} B"
+
+
+def budget_warnings(est: CostEstimate, seconds: float, gigabytes: float) -> list[str]:
+    """Human-readable warnings for an estimate that exceeds the time or memory budget."""
+    out = []
+    if est.seconds is not None and est.seconds > seconds:
+        out.append(
+            f"estimated time {_fmt_seconds(est.seconds)} exceeds the budget of "
+            f"{_fmt_seconds(seconds)} ({est.driver})"
+        )
+    if est.memory_bytes is not None and est.memory_bytes > gigabytes * 1e9:
+        out.append(
+            f"estimated memory {_fmt_bytes(est.memory_bytes)} exceeds the budget of "
+            f"{_fmt_bytes(gigabytes * 1e9)} ({est.driver})"
+        )
+    return out
+
+
+def _warn_if_over_budget(solver, model, args) -> None:
+    for w in budget_warnings(solver.estimate(model), args.budget_seconds, args.budget_gb):
+        print(f"Warning: {w}", file=sys.stderr)
+
+
+def _estimate(args) -> int:
+    model = load_model(args.model)
+    est = get_solver(args.solver).estimate(model)
+    warnings = budget_warnings(est, args.budget_seconds, args.budget_gb)
+    if args.json:
+        payload = est.to_dict()
+        payload["over_budget"] = warnings
+        print(json.dumps(payload, indent=2))
+        return 0
+    feasible = {True: "yes", False: "no", None: "unknown"}[est.feasible]
+    print(f"Solver:     {est.solver}")
+    print(f"Can run:    {feasible}" + (f" ({est.reason})" if est.reason else ""))
+    print(f"Driven by:  {est.driver}")
+    print(f"Time:       {_fmt_seconds(est.seconds)} (one CPU core)")
+    print(f"Memory:     {_fmt_bytes(est.memory_bytes)}")
+    for w in warnings:
+        print(f"Warning:    {w}")
+    return 0
 
 
 def _solve(args) -> int:
     model = load_model(args.model)
-    result = get_solver(args.solver).solve(model)
+    solver = get_solver(args.solver)
+    _warn_if_over_budget(solver, model, args)
+    result = solver.solve(model)
     checks = sanity_check(model, result)
     payload = result.to_dict()
     payload["sanity_checks"] = [c.__dict__ for c in checks]
@@ -63,6 +140,7 @@ def _submit(args) -> int:
     from superconductor.registry import create_submission, write_record
 
     model = load_model(args.model)
+    _warn_if_over_budget(get_solver(args.solver), model, args)
     sub = create_submission(model, args.solver, _contributor(args), notes=args.notes)
     checks = sanity_check(model, sub.result.to_result())
     if not all(c.passed for c in checks):
@@ -147,10 +225,32 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="superconductor", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
+    def add_budget_args(p):
+        p.add_argument(
+            "--budget-seconds",
+            type=float,
+            default=_env_float("SUPERCONDUCTOR_BUDGET_SECONDS", DEFAULT_BUDGET_SECONDS),
+            help="Warn if the estimated time exceeds this (env SUPERCONDUCTOR_BUDGET_SECONDS)",
+        )
+        p.add_argument(
+            "--budget-gb",
+            type=float,
+            default=_env_float("SUPERCONDUCTOR_BUDGET_GB", DEFAULT_BUDGET_GB),
+            help="Warn if the estimated memory exceeds this (env SUPERCONDUCTOR_BUDGET_GB)",
+        )
+
     p = sub.add_parser("solve", help="Solve a model file and run sanity checks on the result")
     p.add_argument("model", help="Path to a model JSON file")
     p.add_argument("--solver", default="ed", choices=list_solvers())
+    add_budget_args(p)
     p.set_defaults(func=_solve)
+
+    p = sub.add_parser("estimate", help="Predict time and memory before solving")
+    p.add_argument("model", help="Path to a model JSON file")
+    p.add_argument("--solver", default="ed", choices=list_solvers())
+    p.add_argument("--json", action="store_true", help="Machine-readable output")
+    add_budget_args(p)
+    p.set_defaults(func=_estimate)
 
     p = sub.add_parser("crosscheck", help="Run the standard cross-validation suite")
     p.set_defaults(func=_crosscheck)
@@ -173,6 +273,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("model")
     p.add_argument("--solver", default="ed", choices=list_solvers())
     add_registry_args(p, contributor=True)
+    add_budget_args(p)
     p.set_defaults(func=_submit)
 
     p = sub.add_parser("reproduce", help="Independently re-run a submission and record it")

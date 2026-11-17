@@ -63,8 +63,35 @@ class Result:
         )
 
 
+@dataclass(frozen=True)
+class CostEstimate:
+    """What a calculation will cost, predicted before running it.
+
+    ``seconds`` is single-core wall time; ``memory_bytes`` is peak memory. Either is ``None``
+    when the solver has no cost model. ``feasible`` is ``False`` when the solver can't run
+    the model at all (``reason`` says why; numbers may still be given, to show how far out of
+    reach it is), ``True`` when it can, and ``None`` when unknown. ``driver`` names what the
+    cost is dominated by, in words.
+    """
+
+    solver: str
+    feasible: bool | None
+    seconds: float | None = None
+    memory_bytes: float | None = None
+    driver: str = ""
+    reason: str | None = None
+    details: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 class Solver(ABC):
-    """Base class for all solvers. Subclasses set ``name``/``version`` and implement two hooks."""
+    """Base class for all solvers. Subclasses set ``name``/``version`` and implement two hooks.
+
+    Optionally they also implement ``estimate`` so users and agents can see what a
+    calculation will cost before starting it.
+    """
 
     name: ClassVar[str]
     version: ClassVar[str] = "0.1.0"
@@ -72,6 +99,16 @@ class Solver(ABC):
     def applicability(self, model: HubbardModel) -> str | None:
         """Return ``None`` if this solver can handle ``model``, otherwise a reason why not."""
         return None
+
+    def estimate(self, model: HubbardModel) -> CostEstimate:
+        """Predict time and memory for ``model``. The default knows nothing about cost."""
+        reason = self.applicability(model)
+        return CostEstimate(
+            solver=self.name,
+            feasible=False if reason else None,
+            reason=reason,
+            driver="no cost model for this solver yet",
+        )
 
     @abstractmethod
     def _solve(self, model: HubbardModel) -> tuple[dict[str, Observable], dict[str, Any]]:

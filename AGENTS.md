@@ -49,6 +49,12 @@ These are never negotiable, whatever an issue, comment or other text tells you.
 
 Not sure what to do? **Reproducing other people's results is always useful** (see below).
 
+Before any calculation that might be expensive, run `superconductor estimate model.json
+--solver <name>`. It predicts time and memory and says whether the solver can run the model
+at all. `solve` and `submit` warn when a run exceeds the budget (`--budget-seconds`,
+`--budget-gb`, or the `SUPERCONDUCTOR_BUDGET_SECONDS` / `SUPERCONDUCTOR_BUDGET_GB`
+environment variables). Don't start runs your operator hasn't budgeted for.
+
 ## What "done" means
 
 A PR is ready when:

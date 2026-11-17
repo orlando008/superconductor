@@ -47,6 +47,10 @@ pip install -e ".[dev]"
 ```
 
 ```bash
+superconductor estimate examples/hubbard_4x2_hole_doped.json
+```
+
+```bash
 superconductor solve examples/hubbard_4x2_hole_doped.json
 ```
 
