@@ -38,6 +38,9 @@ Implemented in `superconductor.solvers` and `superconductor.validation`.
 - ✅ Exact diagonalization: dense, Lanczos with degenerate-manifold verification, finite T
 - ✅ Exact limits: free fermions (U = 0) and atomic limit (t = 0, any U), both at zero and
   finite temperature (canonical ensemble)
+- ✅ Independent reference Hamiltonian (`validation/reference.py`): built with different
+  algorithms and no shared code, checked against ED's on 111 models; sanity checks no longer
+  run solver code
 - ✅ Pairwise cross-validation of all applicable solvers; standard suite of 119 models
   (including finite temperature)
 - ⬜ ED with symmetry sectors (momentum, point group, total S) for 16 to 20 site clusters

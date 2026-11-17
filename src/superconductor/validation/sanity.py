@@ -7,9 +7,13 @@ wrong with the result, not merely that it is surprising.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from superconductor.model import HubbardModel
-from superconductor.solvers import FreeFermions, Result
+from superconductor.validation.reference import reference_free_ground_state
+
+if TYPE_CHECKING:  # type only: the checks never run solver code
+    from superconductor.solvers import Result
 
 
 @dataclass(frozen=True)
@@ -59,13 +63,14 @@ def sanity_check(model: HubbardModel, result: Result, slack: float = 1e-8) -> li
     # Ground-state energy bounds for repulsive U, from the U = 0 problem:
     #   E0(0) <= E0(U)                     (U * D is a non-negative operator)
     #   E0(U) <= E_free + U * D_free       (variational, using the free ground manifold)
+    # The free-fermion reference is computed independently of the solvers (see reference.py).
     if model.temperature == 0 and model.U >= 0 and "energy" in obs:
-        free = FreeFermions().solve(model.with_updates(U=0.0))
-        upper = free["energy"] + model.U * free["double_occupancy"] * n
+        e_free, d_free = reference_free_ground_state(model)
+        upper = e_free + model.U * d_free
         out.append(
             _bound(
                 "energy_free_fermion_bounds",
-                free["energy"],
+                e_free,
                 obs["energy"].value,
                 upper,
                 slack + 2 * obs["energy"].error,

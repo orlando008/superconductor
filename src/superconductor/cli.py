@@ -117,7 +117,18 @@ def _crosscheck(args) -> int:
             )
     total = sum(len(r.comparisons) for r in reports)
     print(f"\n{len(reports)} models, {total} comparisons, {failures} disagreements")
-    return 0 if failures == 0 else 1
+
+    from superconductor.validation import run_hamiltonian_checks
+
+    checks = run_hamiltonian_checks()
+    mismatches = [c for c in checks if not c.passed]
+    for c in mismatches:
+        print(f"FAIL  Hamiltonian {c.model_name}: {c.detail}")
+    print(
+        f"{len(checks)} Hamiltonians checked against the independent reference, "
+        f"{len(mismatches)} mismatches"
+    )
+    return 0 if failures == 0 and not mismatches else 1
 
 
 def _fingerprint(args) -> int:
