@@ -15,6 +15,9 @@ verification platform where every result is traceable, cross-checked and scorabl
 6. **A standing prediction challenge**, like CASP for proteins.
 7. Tools built for AI agents: cost estimates, sanity checks, derivation checker, theory registry.
 
+**New here?** The [project website](https://orlando008.github.io/superconductor/) explains the
+science and the plan in plain language, with interactive visuals (source in [`site/`](site/)).
+
 **Status:** layer 1 and a first slice of layer 2 are implemented. See
 [docs/roadmap.md](docs/roadmap.md) for what exists, what's next, and how the layers fit together.
 

@@ -1,0 +1,933 @@
+<!doctype html><!--pages-only-->
+<html lang="en"><!--pages-only-->
+<head><!--pages-only-->
+<meta charset="utf-8"><!--pages-only-->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><!--pages-only-->
+<title>Cuprate Workbench</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="An open platform where people and AI agents build and cross-check the tools needed to explain high-temperature superconductivity in copper oxides.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one ~68ch reading column with wider breakout figures; the hero splits the thesis from a live lattice you can play with. */
+:root {
+  --bg: #f3f6f8;
+  --surface: #ffffff;
+  --ink: #0f1b26;
+  --ink-2: #445361;
+  --muted: #687684;
+  --line: #d4dde4;
+  --accent: #a24f1d;        /* copper: the Cu in CuO2 */
+  --accent-soft: #f4e3d8;
+  --on-accent: #ffffff;
+  --spin-up: #2a78d6;       /* chart slot 1 */
+  --spin-dn: #1baf7a;       /* chart slot 3 */
+  --good: #0f7a3c;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.3rem;
+  --step-2: 1.75rem;
+  --step-3: clamp(2.1rem, 4.6vw, 3.4rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1319; --surface: #121c25; --ink: #e6edf2; --ink-2: #a9b6c1; --muted: #85929e;
+    --line: #24323e; --accent: #e3905f; --accent-soft: #3a2416; --on-accent: #1b0f07;
+    --spin-up: #3987e5; --spin-dn: #199e70; --good: #4cc27a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1319; --surface: #121c25; --ink: #e6edf2; --ink-2: #a9b6c1; --muted: #85929e;
+  --line: #24323e; --accent: #e3905f; --accent-soft: #3a2416; --on-accent: #1b0f07;
+  --spin-up: #3987e5; --spin-dn: #199e70; --good: #4cc27a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.6;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.12; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: var(--step-2); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: var(--step-1); font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 0.18em; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px;
+}
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+.label {
+  font-family: var(--font-display); font-size: var(--step--1); font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+
+/* ---------- top bar ---------- */
+.topbar { border-bottom: 1px solid var(--line); }
+.topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; flex-wrap: wrap; }
+.brand { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 26px; height: 26px; }
+.topbar nav { display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--font-display); font-size: var(--step--1); font-weight: 500; }
+.topbar nav a { color: var(--ink-2); text-decoration: none; }
+.topbar nav a:hover { color: var(--accent); }
+
+/* ---------- hero ---------- */
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; padding-block: 56px 64px; align-items: start; }
+.hero-text { display: grid; gap: 22px; min-width: 0; }
+.hero-text .lede { font-size: 1.2rem; color: var(--ink-2); max-width: 36em; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 0.98rem; text-decoration: none;
+  border: 1.5px solid var(--accent); cursor: pointer;
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-ghost { background: transparent; color: var(--accent); }
+.facts { display: flex; flex-wrap: wrap; gap: 10px 28px; color: var(--muted); font-size: var(--step--1); font-family: var(--font-display); }
+.facts b { color: var(--ink); font-weight: 700; }
+
+.lab { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.lab-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.lab-head h2 { font-size: var(--step-1); }
+.toy-tag { font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; }
+#lattice { width: 100%; aspect-ratio: 1 / 1; max-width: 100%; display: block; border-radius: 8px; background: var(--bg); touch-action: manipulation; }
+.controls { display: grid; gap: 12px; }
+.control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; }
+.control label { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; }
+.control output { font-family: var(--font-mono); font-size: 0.9rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.control input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.control .hint { grid-column: 1 / -1; font-size: 0.85rem; color: var(--muted); }
+.meter-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font-family: var(--font-display); font-size: 0.92rem; }
+.meter { height: 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+.meter > span { display: block; height: 100%; width: 0%; background: var(--accent); border-radius: 999px; transition: width 0.4s ease; }
+.meter-row output { font-family: var(--font-mono); font-variant-numeric: tabular-nums; min-width: 3.5ch; text-align: right; }
+.lab-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.85rem; color: var(--ink-2); font-family: var(--font-display); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sw-up { background: var(--spin-up); }
+.sw-dn { background: var(--spin-dn); }
+.sw-dbl { border: 2px solid var(--accent); border-radius: 50%; }
+.btn-small { padding: 6px 12px; font-size: 0.85rem; }
+.lab-read { font-size: 0.95rem; color: var(--ink-2); }
+
+/* ---------- sections ---------- */
+section.block { border-top: 1px solid var(--line); }
+section.block > .wrap { padding-block: 64px; display: grid; gap: 28px; }
+.prose { max-width: 68ch; display: grid; gap: 16px; }
+.prose p { color: var(--ink); }
+.prose .aside { color: var(--ink-2); font-size: 0.97rem; }
+figure { margin: 0; display: grid; gap: 12px; min-width: 0; }
+figcaption { font-size: 0.92rem; color: var(--ink-2); max-width: 68ch; }
+.chart-box { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 14px 10px; overflow-x: auto; }
+.chart-box svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.diagram-box svg { min-width: 520px; }
+details.data { font-size: 0.9rem; color: var(--ink-2); }
+details.data summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; }
+details.data .table-scroll { overflow-x: auto; margin-top: 8px; }
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 100%; }
+th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-family: var(--font-display); font-weight: 600; color: var(--ink); }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-display); font-size: 0.88rem; color: var(--ink-2); padding: 0 4px 8px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* SVG roles: every color comes from a token */
+svg text { font-family: var(--font-display); fill: var(--ink-2); }
+svg .t-strong { fill: var(--ink); font-weight: 700; }
+svg .t-muted { fill: var(--muted); }
+svg .grid { stroke: var(--line); stroke-width: 1; }
+svg .axis { stroke: var(--muted); stroke-width: 1; }
+svg .ref { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; }
+svg .bar-cuprate { fill: var(--spin-up); }
+svg .bar-conv { fill: var(--spin-dn); }
+svg .bar-plain { fill: var(--spin-up); }
+svg .accent-fill { fill: var(--accent); }
+svg .accent-stroke { stroke: var(--accent); }
+svg .dome-area { fill: var(--spin-up); fill-opacity: 0.16; }
+svg .dome-line { stroke: var(--spin-up); stroke-width: 2.5; fill: none; }
+svg .af-zone { fill: var(--spin-dn); fill-opacity: 0.22; }
+svg .surface-fill { fill: var(--surface); }
+svg .bg-fill { fill: var(--bg); }
+svg .ink-stroke { stroke: var(--ink-2); fill: none; stroke-width: 1.5; }
+svg .line-stroke { stroke: var(--line); }
+svg .crosshair { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 3; }
+svg .hit { fill: transparent; cursor: crosshair; }
+svg [data-tip] { cursor: default; }
+
+.tip {
+  position: fixed; z-index: 30; pointer-events: none; max-width: 260px;
+  background: var(--ink); color: var(--bg); font-family: var(--font-display); font-size: 0.85rem;
+  line-height: 1.35; padding: 8px 10px; border-radius: 6px;
+}
+
+/* Methods */
+.methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.method { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.method h3 { font-size: 1.05rem; }
+.method dl { margin: 0; display: grid; gap: 6px; font-size: 0.95rem; }
+.method dt { font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.method dd { margin: 0; }
+
+/* Story */
+.story { border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; display: grid; gap: 8px; max-width: 68ch; }
+.story .big { font-family: var(--font-mono); font-size: 1.05rem; }
+
+/* Layers */
+.layers { display: grid; gap: 8px; max-width: 820px; }
+.layer { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+.layer.key { border-color: var(--accent); background: var(--accent-soft); }
+.layer .n { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; color: var(--muted); text-align: center; }
+.layer .what { min-width: 0; }
+.layer .what b { font-family: var(--font-display); display: block; }
+.layer .what span { color: var(--ink-2); font-size: 0.93rem; }
+.status { font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--muted); }
+.status.started { color: var(--good); }
+.status svg { width: 14px; height: 14px; }
+
+/* Lifecycle */
+.flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; counter-reset: step; }
+.flow li { list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.flow li::before { counter-increment: step; content: "Step " counter(step); font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.flow { padding: 0; margin: 0; }
+.flow h3 { font-size: 1.05rem; }
+.flow p { font-size: 0.95rem; color: var(--ink-2); }
+.dispute { max-width: 68ch; font-size: 0.95rem; color: var(--ink-2); }
+
+/* Help */
+.roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.role { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.role h3 { font-size: 1.1rem; }
+.role p { font-size: 0.97rem; color: var(--ink-2); }
+.cmd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 8px 8px 12px; }
+.cmd code { overflow-x: auto; white-space: nowrap; font-size: 0.82rem; }
+.copy { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+
+footer { border-top: 1px solid var(--line); }
+footer .wrap { padding-block: 32px 48px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; font-size: 0.9rem; color: var(--muted); font-family: var(--font-display); }
+footer a { color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  .hero .wrap { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-block: 36px 48px; }
+  .methods, .roles, .flow { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .meter > span { transition: none; }
+}
+</style>
+</head><!--pages-only-->
+<body><!--pages-only-->
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Cuprate Workbench home">
+      <svg class="brand-mark" viewBox="0 0 26 26" aria-hidden="true">
+        <rect x="1" y="1" width="24" height="24" rx="5" class="bg-fill" style="stroke: var(--line)"/>
+        <circle cx="8" cy="8" r="2.6" class="accent-fill"/><circle cx="18" cy="8" r="2.6" class="accent-fill"/>
+        <circle cx="8" cy="18" r="2.6" class="accent-fill"/><circle cx="18" cy="18" r="2.6" class="accent-fill"/>
+        <path d="M8 8H18M8 18H18M8 8V18M18 8V18" class="accent-stroke" stroke-width="1.2" fill="none" opacity="0.55"/>
+      </svg>
+      Cuprate Workbench
+    </a>
+    <nav aria-label="Sections">
+      <a href="#puzzle">The puzzle</a>
+      <a href="#hard">Why it's hard</a>
+      <a href="#trust">Checking</a>
+      <a href="#layers">The plan</a>
+      <a href="#help">Get involved</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-text">
+      <span class="label">An open research platform</span>
+      <h1>Why does copper oxide superconduct?</h1>
+      <p class="lede">Forty years after their discovery, nobody can fully explain why copper-oxide ceramics carry electricity with zero resistance at temperatures far above every other material known at ordinary pressure. We're building the shared instruments to settle it: simulations that check each other, results anyone can reproduce, and a public scoreboard for theories.</p>
+      <div class="ctas">
+        <a class="btn btn-primary" href="https://github.com/orlando008/superconductor">See the code on GitHub</a>
+        <a class="btn btn-ghost" href="#help">How to help</a>
+      </div>
+      <div class="facts" aria-label="Key facts">
+        <span><b>1986</b> cuprates discovered</span>
+        <span><b>133 K</b> record at normal pressure</span>
+        <span><b>0</b> agreed explanations</span>
+      </div>
+    </div>
+
+    <div class="lab" aria-labelledby="lab-title">
+      <div class="lab-head">
+        <h2 id="lab-title">Electrons on a copper grid</h2>
+        <span class="toy-tag">Illustration</span>
+      </div>
+      <canvas id="lattice" role="img" aria-label="A 10 by 10 grid of copper sites with electrons hopping between them. Arrows show electrons with spin up and spin down; rings mark sites holding two electrons."></canvas>
+      <div class="controls">
+        <div class="control">
+          <label for="u">Repulsion between electrons (U)</label>
+          <output id="u-out" for="u">8 t</output>
+          <input id="u" type="range" min="0" max="12" step="0.5" value="8">
+        </div>
+        <div class="control">
+          <label for="dop">Electrons removed (doping)</label>
+          <output id="dop-out" for="dop">0%</output>
+          <input id="dop" type="range" min="0" max="30" step="1" value="0">
+        </div>
+      </div>
+      <div class="meter-row">
+        <span>Hops that succeed</span>
+        <div class="meter" aria-hidden="true"><span id="meter-fill"></span></div>
+        <output id="meter-out">–</output>
+      </div>
+      <p class="lab-read" id="lab-read" aria-live="polite">With one electron per site and strong repulsion, almost every hop is blocked. The grid is jammed: an insulator.</p>
+      <div class="lab-foot">
+        <div class="legend">
+          <span><i class="sw sw-up"></i>Spin up</span>
+          <span><i class="sw sw-dn"></i>Spin down</span>
+          <span><i class="sw sw-dbl"></i>Two on one site (costs U)</span>
+        </div>
+        <button class="btn btn-ghost btn-small" id="play" type="button">Pause</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="puzzle">
+  <div class="wrap">
+    <div class="prose">
+      <span class="label">The puzzle</span>
+      <h2>Superconductors need extreme cold. Cuprates need much less.</h2>
+      <p>A superconductor loses all electrical resistance below a critical temperature, written T<sub>c</sub>. No energy is wasted as heat, which is why superconductors power MRI scanners, particle accelerators and maglev trains. The catch is cooling. Classic superconductors only work near absolute zero, which takes expensive liquid helium.</p>
+      <p>In 1986, copper-oxide ceramics (cuprates) broke that barrier. Within a few years they superconducted above the boiling point of liquid nitrogen, a coolant that costs less than milk. The theory that explains classic superconductors, from 1957, does not explain cuprates. Without the right theory, nobody can design the next material on purpose, including one that might work at room temperature.</p>
+    </div>
+    <figure>
+      <div class="chart-box">
+        <div class="chart-legend" aria-hidden="true">
+          <span><i class="sw sw-dn"></i>Classic superconductors</span>
+          <span><i class="sw sw-up"></i>Cuprates (copper oxides)</span>
+          <span><svg width="22" height="10" aria-hidden="true"><line x1="0" y1="5" x2="22" y2="5" class="ref"/></svg>Coolants and room temperature</span>
+        </div>
+        <svg id="chart-tc" viewBox="0 0 760 350" role="img" aria-labelledby="tc-title tc-desc">
+          <title id="tc-title">Highest superconducting temperature by material</title>
+          <desc id="tc-desc">Bars for seven materials on a 0 to 300 kelvin scale. Classic superconductors reach at most 39 kelvin. Cuprates reach 38 to 133 kelvin, above liquid nitrogen at 77 kelvin. Room temperature is 293 kelvin.</desc>
+        </svg>
+      </div>
+      <figcaption>Highest T<sub>c</sub> at ordinary pressure, in kelvin (0 K is absolute zero; 293 K is room temperature). Hydrogen-rich compounds have superconducted near 250 K, but only when squeezed to pressures found deep inside the Earth.</figcaption>
+      <details class="data">
+        <summary>Show the numbers</summary>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Material</th><th>Family</th><th>Discovered</th><th>T<sub>c</sub> (K)</th></tr></thead>
+            <tbody id="tc-table"></tbody>
+          </table>
+        </div>
+      </details>
+    </figure>
+  </div>
+</section>
+
+<section class="block" id="hard">
+  <div class="wrap">
+    <div class="prose">
+      <span class="label">Why it's hard</span>
+      <h2>The electrons act as a crowd, and crowds are expensive to compute</h2>
+      <p>In most materials each electron can be treated as if it moves on its own. In cuprates the electrons repel each other so strongly that they move as a collective, the way a packed crowd does. You cannot follow one person and understand the crowd.</p>
+      <p>Physicists simplify the material to its essential layer: a flat grid of copper atoms. Even then, each site can be empty, hold one electron spinning up or down, or hold two. Four possibilities per site means the number of arrangements multiplies by four with every site you add.</p>
+    </div>
+    <figure>
+      <div class="chart-box">
+        <svg id="chart-explode" viewBox="0 0 760 360" role="img" aria-labelledby="ex-title ex-desc">
+          <title id="ex-title">Number of possible electron arrangements by grid size</title>
+          <desc id="ex-desc">Bars on a logarithmic scale. A 2 by 2 grid has 256 arrangements, 4 by 4 has about 4.3 billion, 6 by 6 about 10 to the 21, 8 by 8 about 10 to the 38 and 10 by 10 about 10 to the 60, which is more than the number of atoms in the Earth.</desc>
+        </svg>
+      </div>
+      <figcaption>The vertical axis is logarithmic: each gridline is ten billion (10<sup>10</sup>) times the one below it. A real crystal has around 10<sup>23</sup> sites. Exact calculations top out at grids of about 20 sites, even with clever shortcuts, so everything bigger relies on approximations.</figcaption>
+      <details class="data">
+        <summary>Show the numbers</summary>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Grid</th><th>Sites</th><th>Arrangements (4<sup>sites</sup>)</th></tr></thead>
+            <tbody id="ex-table"></tbody>
+          </table>
+        </div>
+      </details>
+    </figure>
+
+    <div class="prose">
+      <h3>The model: three knobs</h3>
+      <p>The standard simplification is the <b>Hubbard model</b>, the one in the grid at the top of this page. Electrons sit on a checkerboard of copper sites and do two things: they <b>hop</b> to neighbouring sites (how easily is set by <code>t</code>, and <code>t′</code> for diagonal hops), and they <b>repel</b> each other when two share a site (how strongly is set by <code>U</code>). The third knob is <b>doping</b>: how many electrons are removed.</p>
+      <p>With exactly one electron per site and strong repulsion, the electrons jam. Nobody can move without doubling up, so the material is an insulator. Remove a few electrons and they can move again. In real cuprates, superconductivity appears in a dome-shaped window of doping.</p>
+    </div>
+    <figure>
+      <div class="chart-box">
+        <svg id="chart-dome" viewBox="0 0 760 360" role="img" aria-labelledby="dome-title dome-desc">
+          <title id="dome-title">Superconducting temperature versus doping in cuprates</title>
+          <desc id="dome-desc">A dome-shaped curve. Superconductivity starts near 5 percent doping, peaks at 16 percent and ends near 27 percent. Below about 2 percent the material is an antiferromagnetic insulator.</desc>
+        </svg>
+      </div>
+      <figcaption>The dome follows the empirical relation T<sub>c</sub>/T<sub>c,max</sub> = 1 − 82.6 (p − 0.16)<sup>2</sup> (Presland, Tallon and co-workers, 1991), which describes many cuprates. The insulating region at low doping is shown schematically. Hover to read values.</figcaption>
+    </figure>
+    <div class="prose">
+      <p class="aside">The big open question: does this simple model produce superconductivity by itself, or are ingredients missing? Large computations in recent years give different answers depending on the method and the value of <code>t′</code>. Settling questions like this one is what the platform is for.</p>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="trust">
+  <div class="wrap">
+    <div class="prose">
+      <span class="label">Checking</span>
+      <h2>Every method is blind somewhere. Use them to check each other.</h2>
+      <p>Because exact answers are out of reach for large grids, physicists use approximate methods. Each one fails in a different place, so a single result can never tell you whether you are seeing physics or a flaw in the method.</p>
+    </div>
+    <div class="methods">
+      <article class="method">
+        <h3>Exact diagonalization</h3>
+        <dl><dt>Good at</dt><dd>Perfect answers to test everything else against</dd><dt>Blind spot</dt><dd>Only tiny grids, about 20 sites</dd></dl>
+      </article>
+      <article class="method">
+        <h3>Quantum Monte Carlo</h3>
+        <dl><dt>Good at</dt><dd>Unbiased results on larger grids at finite temperature</dd><dt>Blind spot</dt><dd>The "sign problem" makes it explode exactly where electrons are removed</dd></dl>
+      </article>
+      <article class="method">
+        <h3>DMRG and tensor networks</h3>
+        <dl><dt>Good at</dt><dd>Lowest-energy states of long strips</dd><dt>Blind spot</dt><dd>Stretching strip results to a true 2D plane</dd></dl>
+      </article>
+      <article class="method">
+        <h3>Dynamical mean-field theory</h3>
+        <dl><dt>Good at</dt><dd>Local effects and real-material spectra</dd><dt>Blind spot</dt><dd>Misses longer-range correlations</dd></dl>
+      </article>
+      <article class="method">
+        <h3>Neural-network states</h3>
+        <dl><dt>Good at</dt><dd>Rapidly improving accuracy</dd><dt>Blind spot</dt><dd>Hard to verify the optimization worked</dd></dl>
+      </article>
+      <article class="method">
+        <h3>Diagrammatic Monte Carlo</h3>
+        <dl><dt>Good at</dt><dd>Controlled results for infinite systems</dd><dt>Blind spot</dt><dd>Struggles when repulsion is strong</dd></dl>
+      </article>
+    </div>
+    <figure>
+      <div class="chart-box diagram-box">
+        <svg viewBox="0 0 760 290" role="img" aria-labelledby="xc-title xc-desc">
+          <title id="xc-title">How cross-checking works</title>
+          <desc id="xc-desc">Two overlapping regions show where method A and method B are reliable. In the overlap, both must give the same answer. If they agree, confidence grows. If they disagree, it is either a bug or real physics, and it gets investigated.</desc>
+          <ellipse cx="250" cy="140" rx="190" ry="110" class="bg-fill" style="stroke: var(--spin-up); stroke-width: 2.5"/>
+          <ellipse cx="420" cy="140" rx="190" ry="110" style="fill: none; stroke: var(--spin-dn); stroke-width: 2.5"/>
+          <text x="140" y="96" class="t-strong" font-size="17">Method A</text>
+          <text x="140" y="118" font-size="14">reliable here</text>
+          <text x="470" y="96" class="t-strong" font-size="17">Method B</text>
+          <text x="470" y="118" font-size="14">reliable here</text>
+          <text x="335" y="142" text-anchor="middle" class="t-strong" font-size="15">Both must</text>
+          <text x="335" y="162" text-anchor="middle" class="t-strong" font-size="15">agree here</text>
+          <path d="M610 112 L652 82" class="ink-stroke"/>
+          <path d="M610 168 L652 198" class="ink-stroke"/>
+          <circle cx="672" cy="70" r="15" style="fill: var(--good)"/>
+          <path d="M665 70 L670 75 L680 64" style="stroke: var(--surface); stroke-width: 2.5; fill: none"/>
+          <text x="696" y="66" class="t-strong" font-size="14">Agree</text>
+          <text x="696" y="84" font-size="13">trust grows</text>
+          <circle cx="672" cy="210" r="15" class="accent-fill"/>
+          <text x="672" y="216" text-anchor="middle" font-size="17" style="fill: var(--on-accent); font-weight: 800">!</text>
+          <text x="696" y="206" class="t-strong" font-size="14">Disagree</text>
+          <text x="696" y="224" font-size="13">bug or physics?</text>
+          <text x="40" y="276" class="t-muted" font-size="13">Small grids, high temperature, weak repulsion and other special cases are where methods overlap.</text>
+        </svg>
+      </div>
+    </figure>
+    <div class="story">
+      <span class="label">It already happened</span>
+      <p>On the first day of building this platform, a standard, widely used maths routine reported the lowest energy of a test system as</p>
+      <p class="big">E = 6 &nbsp;(reported, with no warning)<br>E = 0 &nbsp;(the exact answer)</p>
+      <p>Its own error checks said everything was fine. The mistake was caught only because an independent method, built to agree in that special case, disagreed. That is the whole idea in one example.</p>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="layers">
+  <div class="wrap">
+    <div class="prose">
+      <span class="label">The plan</span>
+      <h2>Seven layers, each built on the ones below</h2>
+      <p>Hunting directly for a theory leaves little behind if it fails. Building checkable infrastructure is useful whatever happens: research groups can use it today, future AI models start from firmer ground, and it carries over to other materials with strongly interacting electrons.</p>
+    </div>
+    <div class="layers" id="layer-list"></div>
+  </div>
+</section>
+
+<section class="block" id="results">
+  <div class="wrap">
+    <div class="prose">
+      <span class="label">Results</span>
+      <h2>A result counts once someone else reproduces it</h2>
+      <p>Anyone can submit a calculation. Every record is permanent and fingerprinted, so it can't be quietly edited later, and it names the person responsible for it. Its status is computed from what others find, never declared by the submitter.</p>
+    </div>
+    <ol class="flow">
+      <li><h3>Submitted</h3><p>A contributor runs a calculation and records it with everything needed to rerun it: the exact problem, the code version and the settings.</p></li>
+      <li><h3>Reproduced</h3><p>A different person reruns it independently. Using a different method counts as even stronger evidence.</p></li>
+      <li><h3>Trusted</h3><p>The result becomes something others can build on, compare theories against and cite.</p></li>
+    </ol>
+    <p class="dispute">If a reproduction disagrees, the result is marked <b>disputed</b> and investigated in the open. Disagreements are findings: each one is either a bug to fix or physics to understand. Nobody resolves one by editing the numbers.</p>
+  </div>
+</section>
+
+<section class="block" id="help">
+  <div class="wrap">
+    <div class="prose">
+      <span class="label">Get involved</span>
+      <h2>Built in the open, by people and their AI agents</h2>
+      <p>The work is split into small tasks with clear pass/fail criteria, so many contributors can work in parallel and the automated checks decide what gets in.</p>
+    </div>
+    <div class="roles">
+      <article class="role">
+        <h3>Physicists</h3>
+        <p>Review the core design, propose tests with known answers, and tell us which questions matter most. Design decisions are marked <code>needs-expert</code>.</p>
+        <a href="https://github.com/orlando008/superconductor/issues?q=is%3Aopen+label%3Aneeds-expert">Open design questions</a>
+      </article>
+      <article class="role">
+        <h3>Developers and agent operators</h3>
+        <p>Pick up a task labelled <code>agent-ready</code>. Each one lists what "done" means. Agents follow the rules in AGENTS.md.</p>
+        <div class="cmd"><code id="cmd-1">pip install -e ".[dev]" &amp;&amp; superconductor crosscheck</code><button class="copy" type="button" data-copy="cmd-1">Copy</button></div>
+        <a href="https://github.com/orlando008/superconductor/issues?q=is%3Aopen+label%3Aagent-ready">Tasks ready to take</a>
+      </article>
+      <article class="role">
+        <h3>Verifiers</h3>
+        <p>Rerun someone else's result and record whether you get the same answer. It's the most valuable contribution there is, and it needs no new code.</p>
+        <div class="cmd"><code id="cmd-2">superconductor status</code><button class="copy" type="button" data-copy="cmd-2">Copy</button></div>
+        <a href="https://github.com/orlando008/superconductor/blob/main/results/README.md">How results work</a>
+      </article>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Cuprate Workbench is open source under the MIT licence. This page lives in the repository; improve it with a pull request.</span>
+    <span><a href="https://github.com/orlando008/superconductor">GitHub</a> · <a href="https://github.com/orlando008/superconductor/blob/main/docs/vision.md">Vision</a> · <a href="https://github.com/orlando008/superconductor/blob/main/docs/roadmap.md">Roadmap</a></span>
+  </div>
+</footer>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function el(name, attrs, parent, text) {
+    const node = document.createElementNS(SVGNS, name);
+    for (const k in attrs) node.setAttribute(k, attrs[k]);
+    if (text !== undefined) node.textContent = text;
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  /* ---------- tooltip ---------- */
+  const tip = document.getElementById("tip");
+  function showTip(text, x, y) {
+    tip.textContent = text;
+    tip.hidden = false;
+    const r = tip.getBoundingClientRect();
+    let left = x + 14, top = y - r.height - 12;
+    if (left + r.width > window.innerWidth - 8) left = x - r.width - 14;
+    if (top < 8) top = y + 16;
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
+  }
+  function hideTip() { tip.hidden = true; }
+  document.addEventListener("pointermove", function (e) {
+    const t = e.target.closest && e.target.closest("[data-tip]");
+    if (t) showTip(t.getAttribute("data-tip"), e.clientX, e.clientY);
+    else if (!e.target.closest || !e.target.closest(".hit")) hideTip();
+  });
+  window.addEventListener("scroll", hideTip, { passive: true });
+
+  /* ---------- chart 1: critical temperatures ---------- */
+  const materials = [
+    { name: "Niobium", fam: "conv", year: 1930, tc: 9.2 },
+    { name: "Nb₃Sn", fam: "conv", year: 1954, tc: 18.3 },
+    { name: "LSCO (La₂₋ₓSrₓCuO₄)", fam: "cuprate", year: 1987, tc: 38 },
+    { name: "Magnesium diboride", fam: "conv", year: 2001, tc: 39 },
+    { name: "YBCO (YBa₂Cu₃O₇)", fam: "cuprate", year: 1987, tc: 93 },
+    { name: "Bi-2223", fam: "cuprate", year: 1988, tc: 110 },
+    { name: "Hg-1223", fam: "cuprate", year: 1993, tc: 133 }
+  ];
+  (function () {
+    const svg = document.getElementById("chart-tc");
+    const x0 = 210, x1 = 730, top = 62, rowH = 36, barH = 20;
+    const X = function (k) { return x0 + (k / 300) * (x1 - x0); };
+    const bottom = top + materials.length * rowH;
+    [0, 50, 100, 150, 200, 250, 300].forEach(function (k) {
+      el("line", { x1: X(k), x2: X(k), y1: top - 6, y2: bottom, class: "grid" }, svg);
+      el("text", { x: X(k), y: bottom + 20, "text-anchor": "middle", "font-size": 13 }, svg, k + " K");
+    });
+    el("line", { x1: x0, x2: x0, y1: top - 6, y2: bottom, class: "axis" }, svg);
+    materials.forEach(function (m, i) {
+      const y = top + i * rowH + (rowH - barH) / 2;
+      el("text", { x: x0 - 10, y: y + barH / 2 + 5, "text-anchor": "end", "font-size": 14, class: "t-strong" }, svg, m.name);
+      const w = Math.max(X(m.tc) - x0, 4);
+      el("rect", {
+        x: x0, y: y, width: w, height: barH, rx: 4,
+        class: m.fam === "cuprate" ? "bar-cuprate" : "bar-conv",
+        "data-tip": m.name + ": " + m.tc + " K (" + (m.fam === "cuprate" ? "cuprate" : "classic") + ", discovered " + m.year + ")"
+      }, svg);
+      el("text", { x: X(m.tc) + 8, y: y + barH / 2 + 5, "font-size": 13 }, svg, m.tc + " K");
+    });
+    const refs = [
+      { k: 4.2, label: "Liquid helium 4 K", anchor: "start", dx: 6, y: 20 },
+      { k: 77, label: "Liquid nitrogen 77 K", anchor: "start", dx: 6, y: 42 },
+      { k: 293, label: "Room 293 K", anchor: "end", dx: -6, y: 20 }
+    ];
+    refs.forEach(function (r) {
+      el("line", { x1: X(r.k), x2: X(r.k), y1: r.y - 14, y2: bottom, class: "ref", "data-tip": r.label }, svg);
+      el("text", { x: X(r.k) + r.dx, y: r.y, "text-anchor": r.anchor, "font-size": 13, class: "t-strong" }, svg, r.label);
+    });
+    const tb = document.getElementById("tc-table");
+    materials.forEach(function (m) {
+      const tr = document.createElement("tr");
+      [m.name, m.fam === "cuprate" ? "Cuprate" : "Classic", m.year, m.tc].forEach(function (v) {
+        const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  })();
+
+  /* ---------- chart 2: combinatorial explosion ---------- */
+  (function () {
+    const svg = document.getElementById("chart-explode");
+    const grids = [
+      { g: "2 × 2", n: 4 }, { g: "3 × 3", n: 9 }, { g: "4 × 4", n: 16 },
+      { g: "6 × 6", n: 36 }, { g: "8 × 8", n: 64 }, { g: "10 × 10", n: 100 }
+    ];
+    const L4 = Math.log10(4);
+    const x0 = 80, x1 = 628, y0 = 310, y1 = 22, maxE = 64;
+    const Y = function (e) { return y0 - (e / maxE) * (y0 - y1); };
+    for (let e = 0; e <= 60; e += 10) {
+      el("line", { x1: x0, x2: x1, y1: Y(e), y2: Y(e), class: "grid" }, svg);
+      const t = el("text", { x: x0 - 10, y: Y(e) + 5, "text-anchor": "end", "font-size": 13 }, svg);
+      if (e === 0) t.textContent = "1";
+      else { t.textContent = "10"; el("tspan", { dy: -7, "font-size": 10 }, t, String(e)); }
+    }
+    el("line", { x1: x0, x2: x1, y1: y0, y2: y0, class: "axis" }, svg);
+    const refs = [
+      { e: Math.log10(2e9), short: "16 GB laptop", label: "What a 16 GB laptop can hold: about 2 billion numbers" },
+      { e: Math.log10(1.3e50), short: "Atoms in Earth", label: "Atoms in the Earth: about 10⁵⁰" }
+    ];
+    refs.forEach(function (r) {
+      el("line", { x1: x0, x2: x1 + 4, y1: Y(r.e), y2: Y(r.e), class: "ref", "data-tip": r.label }, svg);
+      el("text", { x: x1 + 12, y: Y(r.e) + 5, "font-size": 13, class: "t-strong", "data-tip": r.label }, svg, r.short);
+    });
+    const slot = (x1 - x0) / grids.length, bw = Math.min(56, slot * 0.5);
+    function fmt(n) {
+      const e = n * L4;
+      if (e < 7) return Math.round(Math.pow(4, n)).toLocaleString("en-US");
+      if (e < 12) return (Math.pow(4, n) / 1e9).toFixed(1) + " billion";
+      return "about 10" + String(Math.floor(e)).split("").map(function (d) { return "⁰¹²³⁴⁵⁶⁷⁸⁹"[+d]; }).join("");
+    }
+    grids.forEach(function (d, i) {
+      const e = d.n * L4;
+      const cx = x0 + slot * (i + 0.5);
+      el("rect", {
+        x: cx - bw / 2, y: Y(e), width: bw, height: Math.max(y0 - Y(e), 2), rx: 4, class: "bar-plain",
+        "data-tip": d.g + " grid (" + d.n + " sites): 4^" + d.n + " = " + fmt(d.n) + " arrangements"
+      }, svg);
+      el("text", { x: cx, y: y0 + 20, "text-anchor": "middle", "font-size": 13, class: "t-strong" }, svg, d.g);
+      el("text", { x: cx, y: y0 + 37, "text-anchor": "middle", "font-size": 12, class: "t-muted" }, svg, d.n + " sites");
+      if (d.n !== 4 && d.n !== 9) {
+        el("text", { x: cx, y: Y(e) - 8, "text-anchor": "middle", "font-size": 12 }, svg, fmt(d.n));
+      }
+    });
+    svg.setAttribute("viewBox", "0 0 760 360");
+    const tb = document.getElementById("ex-table");
+    grids.forEach(function (d) {
+      const tr = document.createElement("tr");
+      [d.g, d.n, fmt(d.n)].forEach(function (v) { const td = document.createElement("td"); td.textContent = v; tr.appendChild(td); });
+      tb.appendChild(tr);
+    });
+  })();
+
+  /* ---------- chart 3: the dome ---------- */
+  (function () {
+    const svg = document.getElementById("chart-dome");
+    const x0 = 80, x1 = 730, y0 = 300, y1 = 30, pMax = 0.30, tMax = 1.1;
+    const X = function (p) { return x0 + (p / pMax) * (x1 - x0); };
+    const Y = function (t) { return y0 - (t / tMax) * (y0 - y1); };
+    const tc = function (p) { return Math.max(0, 1 - 82.6 * (p - 0.16) * (p - 0.16)); };
+    for (let t = 0; t <= 1.0001; t += 0.25) {
+      el("line", { x1: x0, x2: x1, y1: Y(t), y2: Y(t), class: "grid" }, svg);
+      el("text", { x: x0 - 10, y: Y(t) + 5, "text-anchor": "end", "font-size": 13 }, svg, Math.round(t * 100) + "%");
+    }
+    [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30].forEach(function (p) {
+      el("text", { x: X(p), y: y0 + 22, "text-anchor": "middle", "font-size": 13 }, svg, Math.round(p * 100) + "%");
+    });
+    el("line", { x1: x0, x2: x1, y1: y0, y2: y0, class: "axis" }, svg);
+    el("text", { x: (x0 + x1) / 2, y: y0 + 46, "text-anchor": "middle", "font-size": 13, class: "t-strong" }, svg, "Electrons removed per copper site (doping, p)");
+    el("text", { x: 18, y: (y0 + y1) / 2, "text-anchor": "middle", "font-size": 13, class: "t-strong", transform: "rotate(-90 18 " + ((y0 + y1) / 2) + ")" }, svg, "Tc relative to its peak");
+    el("rect", { x: X(0), y: Y(1.08), width: X(0.02) - X(0), height: y0 - Y(1.08), class: "af-zone", "data-tip": "Antiferromagnetic insulator (schematic): electrons jammed, spins alternate" }, svg);
+    el("text", { x: X(0.025), y: Y(0.97), "font-size": 13, class: "t-strong" }, svg, "Insulator");
+    el("text", { x: X(0.025), y: Y(0.97) + 17, "font-size": 12 }, svg, "electrons jammed");
+    const pts = [];
+    for (let p = 0.05; p <= 0.2701; p += 0.0025) pts.push([X(p), Y(tc(p))]);
+    const line = pts.map(function (q, i) { return (i ? "L" : "M") + q[0].toFixed(1) + " " + q[1].toFixed(1); }).join(" ");
+    el("path", { d: line + " L" + X(0.27).toFixed(1) + " " + y0 + " L" + X(0.05).toFixed(1) + " " + y0 + " Z", class: "dome-area" }, svg);
+    el("path", { d: line, class: "dome-line" }, svg);
+    el("line", { x1: X(0.16), x2: X(0.16), y1: Y(1), y2: y0, class: "ref" }, svg);
+    el("text", { x: X(0.16), y: Y(1) - 10, "text-anchor": "middle", "font-size": 13, class: "t-strong" }, svg, "Peak at 16%");
+    el("text", { x: X(0.16), y: Y(0.45), "text-anchor": "middle", "font-size": 14, class: "t-strong" }, svg, "Superconductor");
+    const cross = el("line", { x1: 0, x2: 0, y1: y1, y2: y0, class: "crosshair", visibility: "hidden" }, svg);
+    const dot = el("circle", { r: 5, class: "accent-fill", visibility: "hidden", style: "stroke: var(--surface); stroke-width: 2" }, svg);
+    const hit = el("rect", { x: x0, y: y1, width: x1 - x0, height: y0 - y1, class: "hit" }, svg);
+    function move(e) {
+      const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+      const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+      const p = Math.min(pMax, Math.max(0, (loc.x - x0) / (x1 - x0) * pMax));
+      const v = (p >= 0.05 && p <= 0.27) ? tc(p) : 0;
+      cross.setAttribute("x1", X(p)); cross.setAttribute("x2", X(p)); cross.setAttribute("visibility", "visible");
+      dot.setAttribute("cx", X(p)); dot.setAttribute("cy", Y(v)); dot.setAttribute("visibility", "visible");
+      let msg = "Doping " + (p * 100).toFixed(1) + "%: ";
+      if (p < 0.02) msg += "insulator (schematic)";
+      else if (v === 0) msg += "not superconducting";
+      else msg += "Tc = " + Math.round(v * 100) + "% of peak (e.g. " + Math.round(v * 93) + " K for YBCO-like 93 K peak)";
+      showTip(msg, e.clientX, e.clientY);
+    }
+    hit.addEventListener("pointermove", move);
+    hit.addEventListener("pointerleave", function () { cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); hideTip(); });
+  })();
+
+  /* ---------- layers ---------- */
+  (function () {
+    const layers = [
+      [7, "Tools built for AI agents", "Cost estimates, automatic sanity checks, a derivation checker, theories written as testable predictions", true],
+      [6, "A standing prediction challenge", "Theories predict answers before they are revealed, then get scored in public. The scoreboard everything else feeds.", false, true],
+      [5, "Forty years of experiments, machine-readable", "Measurements from thousands of papers, each with its source", false],
+      [4, "Predicting what instruments measure", "Turning simulation output into exactly what each experiment records", false],
+      [3, "From real materials to model settings", "Crystal structure in, model knobs with error bars out", false],
+      [2, "Many methods, checked against each other", "Exact solvers today; Monte Carlo, tensor networks and more next", true],
+      [1, "One shared way to describe the problem", "Every result traces back to exactly what was solved", true]
+    ];
+    const ok = '<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="currentColor"/><path d="M4 7.2l2 2 4-4.4" stroke="var(--surface)" stroke-width="1.8" fill="none"/></svg>';
+    const todo = '<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-dasharray="2.5 2"/></svg>';
+    const list = document.getElementById("layer-list");
+    layers.forEach(function (l) {
+      const div = document.createElement("div");
+      div.className = "layer" + (l[4] ? " key" : "");
+      div.innerHTML = '<span class="n" aria-label="Layer ' + l[0] + '">' + l[0] + '</span>' +
+        '<div class="what"><b></b><span></span></div>' +
+        '<span class="status ' + (l[3] ? "started" : "") + '">' + (l[3] ? ok + "Started" : todo + "Planned") + "</span>";
+      div.querySelector("b").textContent = l[1];
+      div.querySelector(".what span").textContent = l[2];
+      list.appendChild(div);
+    });
+  })();
+
+  /* ---------- copy buttons ---------- */
+  document.querySelectorAll("[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      const code = document.getElementById(b.getAttribute("data-copy"));
+      const text = code.textContent;
+      const done = function () { b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1600); };
+      const fallback = function () {
+        const r = document.createRange(); r.selectNodeContents(code);
+        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        b.textContent = "Selected";
+      };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+        else fallback();
+      } catch (err) { fallback(); }
+    });
+  });
+
+  /* ---------- the lattice toy ----------
+     Illustration, not a quantum simulation: classical electrons hop at random on a 10x10
+     periodic grid. A hop onto a site already holding the same spin is forbidden (Pauli);
+     a hop that creates a doubly occupied site costs energy U and is accepted with
+     probability exp(-U / T) at a fixed temperature T = 1 (Metropolis rule). */
+  (function () {
+    const L = 10, N = L * L, T = 1;
+    const up = new Uint8Array(N), dn = new Uint8Array(N);
+    let U = 8, dop = 0, playing = !reduceMotion, visible = true;
+    const win = []; let winAcc = 0;
+    const moves = [];
+    const canvas = document.getElementById("lattice");
+    const ctx = canvas.getContext("2d");
+    const uIn = document.getElementById("u"), dIn = document.getElementById("dop");
+    const uOut = document.getElementById("u-out"), dOut = document.getElementById("dop-out");
+    const meterFill = document.getElementById("meter-fill"), meterOut = document.getElementById("meter-out");
+    const read = document.getElementById("lab-read");
+    const playBtn = document.getElementById("play");
+
+    function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+    function nbr(i) {
+      const x = i % L, y = (i / L) | 0;
+      switch ((Math.random() * 4) | 0) {
+        case 0: return ((x + 1) % L) + y * L;
+        case 1: return ((x + L - 1) % L) + y * L;
+        case 2: return x + ((y + 1) % L) * L;
+        default: return x + ((y + L - 1) % L) * L;
+      }
+    }
+    function reset() {
+      up.fill(0); dn.fill(0);
+      const ne = N - Math.round(dop / 100 * N);
+      const nu = Math.ceil(ne / 2), nd = Math.floor(ne / 2);
+      const sites = shuffle(Array.from({ length: N }, function (_, i) { return i; }));
+      for (let k = 0; k < nu; k++) up[sites[k]] = 1;
+      const rest = sites.slice(nu).concat(sites.slice(0, nu)); // fill empty sites first
+      for (let k = 0; k < nd; k++) dn[rest[k]] = 1;
+      win.length = 0; winAcc = 0; moves.length = 0;
+      for (let k = 0; k < 20000; k++) step(false);
+      win.length = 0; winAcc = 0;
+    }
+    function record(acc) {
+      win.push(acc); winAcc += acc;
+      if (win.length > 1500) winAcc -= win.shift();
+    }
+    function step(animate) {
+      const i = (Math.random() * N) | 0;
+      const spinUp = Math.random() < 0.5;
+      const me = spinUp ? up : dn, other = spinUp ? dn : up;
+      if (!me[i]) return;
+      const j = nbr(i);
+      if (me[j]) { record(0); return; }
+      const dE = U * (other[j] - other[i]);
+      if (dE <= 0 || Math.random() < Math.exp(-dE / T)) {
+        me[i] = 0; me[j] = 1; record(1);
+        if (animate) moves.push({ from: i, to: j, spinUp: spinUp, t0: performance.now() });
+      } else record(0);
+    }
+    function describe(rate) {
+      if (U >= 5 && dop === 0) return "One electron per site with strong repulsion: almost every hop is blocked. The grid is jammed, an insulator. Now remove some electrons.";
+      if (U >= 5 && dop > 0) return "Removing electrons opens empty sites, so electrons can move without doubling up. Cuprates superconduct in a window like this, but nobody can yet explain exactly why.";
+      if (U < 2) return "Weak repulsion: electrons double up freely and move easily, like in an ordinary metal. Turn U up to see them jam.";
+      return "Moderate repulsion: doubling up is costly but happens. Turn U higher with nothing removed to see the grid jam.";
+    }
+    function updateReadout() {
+      const rate = win.length ? winAcc / win.length : 0;
+      meterFill.style.width = (rate * 100).toFixed(0) + "%";
+      meterOut.textContent = (rate * 100).toFixed(0) + "%";
+      read.textContent = describe(rate);
+    }
+    function size() {
+      const r = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.width * dpr);
+      draw();
+    }
+    function arrow(cx, cy, s, pointsUp, color) {
+      ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, s * 0.16); ctx.lineCap = "round";
+      const h = s * 0.5, dir = pointsUp ? -1 : 1;
+      ctx.beginPath(); ctx.moveTo(cx, cy - dir * h * 0.85); ctx.lineTo(cx, cy + dir * h * 0.4); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + dir * h);
+      ctx.lineTo(cx - s * 0.3, cy + dir * h * 0.25);
+      ctx.lineTo(cx + s * 0.3, cy + dir * h * 0.25);
+      ctx.closePath(); ctx.fill();
+    }
+    function draw(now) {
+      now = now || performance.now();
+      const W = canvas.width, c = W / L;
+      const colUp = css("--spin-up"), colDn = css("--spin-dn"), colLine = css("--line"), colAcc = css("--accent"), colBg = css("--bg");
+      ctx.fillStyle = colBg; ctx.fillRect(0, 0, W, W);
+      ctx.strokeStyle = colLine; ctx.lineWidth = 1;
+      for (let k = 0; k < L; k++) {
+        const p = (k + 0.5) * c;
+        ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(W, p); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, W); ctx.stroke();
+      }
+      const anim = new Map();
+      for (let m = moves.length - 1; m >= 0; m--) {
+        const f = (now - moves[m].t0) / 160;
+        if (f >= 1) { moves.splice(m, 1); continue; }
+        anim.set(moves[m].to + (moves[m].spinUp ? "u" : "d"), { m: moves[m], f: f });
+      }
+      for (let i = 0; i < N; i++) {
+        const cx = (i % L + 0.5) * c, cy = (((i / L) | 0) + 0.5) * c;
+        ctx.fillStyle = colLine; ctx.beginPath(); ctx.arc(cx, cy, c * 0.05, 0, Math.PI * 2); ctx.fill();
+        if (up[i] && dn[i]) {
+          ctx.strokeStyle = colAcc; ctx.lineWidth = Math.max(2, c * 0.07);
+          ctx.beginPath(); ctx.arc(cx, cy, c * 0.42, 0, Math.PI * 2); ctx.stroke();
+        }
+      }
+      function pos(i, key) {
+        let x = (i % L + 0.5) * c, y = (((i / L) | 0) + 0.5) * c;
+        const a = anim.get(key);
+        if (a) {
+          let fx = (a.m.from % L + 0.5) * c, fy = (((a.m.from / L) | 0) + 0.5) * c;
+          if (Math.abs(fx - x) > c * 1.5) fx = x + (fx > x ? c : -c);
+          if (Math.abs(fy - y) > c * 1.5) fy = y + (fy > y ? c : -c);
+          const e = 1 - Math.pow(1 - a.f, 3);
+          x = fx + (x - fx) * e; y = fy + (y - fy) * e;
+        }
+        return [x, y];
+      }
+      for (let i = 0; i < N; i++) {
+        if (up[i]) { const p = pos(i, i + "u"); arrow(p[0] - c * 0.15, p[1], c * 0.5, true, colUp); }
+        if (dn[i]) { const p = pos(i, i + "d"); arrow(p[0] + c * 0.15, p[1], c * 0.5, false, colDn); }
+      }
+    }
+    let lastRead = 0;
+    function frame(now) {
+      if (playing && visible) {
+        for (let k = 0; k < 14; k++) step(true);
+        draw(now);
+        if (now - lastRead > 400) { updateReadout(); lastRead = now; }
+      }
+      requestAnimationFrame(frame);
+    }
+    function settle() {
+      // When paused, still measure mobility so the readout matches the settings.
+      for (let k = 0; k < 6000; k++) step(false);
+      updateReadout(); draw();
+    }
+    uIn.addEventListener("input", function () {
+      U = parseFloat(uIn.value); uOut.textContent = U + " t";
+      win.length = 0; winAcc = 0;
+      if (!playing) settle();
+    });
+    dIn.addEventListener("input", function () {
+      dop = parseInt(dIn.value, 10); dOut.textContent = dop + "%";
+      reset();
+      if (!playing) settle(); else { draw(); updateReadout(); }
+    });
+    playBtn.addEventListener("click", function () {
+      playing = !playing; playBtn.textContent = playing ? "Pause" : "Play";
+      if (!playing) settle();
+    });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }).observe(canvas);
+    }
+    window.addEventListener("resize", size);
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", function () { draw(); });
+    new MutationObserver(function () { draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    playBtn.textContent = playing ? "Pause" : "Play";
+    reset();
+    for (let k = 0; k < 3000; k++) step(false);
+    updateReadout();
+    size();
+    requestAnimationFrame(frame);
+  })();
+})();
+</script>
+</body><!--pages-only-->
+</html><!--pages-only-->

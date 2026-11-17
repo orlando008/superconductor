@@ -84,6 +84,7 @@ provide the pieces needed for the first round, which uses ED/DQMC numerics as hi
 ## Community infrastructure 🟡
 
 - ✅ `AGENTS.md`, `GOVERNANCE.md`, `CONTRIBUTING.md`, issue and PR templates, `CODEOWNERS`
+- ✅ Public website explaining the project (`site/`, deployed to GitHub Pages)
 - ✅ Results registry: append-only, content-addressed submissions and reproductions;
   computed verification status; CI validation with re-runs of cheap results
 - ✅ CI check that every added record's `contributor.handle` matches the PR author
