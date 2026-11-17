@@ -43,7 +43,10 @@ Implemented in `superconductor.solvers` and `superconductor.validation`.
   run solver code
 - ✅ Pairwise cross-validation of all applicable solvers; standard suite of 119 models
   (including finite temperature)
-- ⬜ ED with symmetry sectors (momentum, point group, total S) for 16 to 20 site clusters
+- ✅ ED with momentum sectors (`ed-k`): every block checked against plain ED; doped 4×4
+  clusters solved on a 15 GB machine and compared with published values
+- ⬜ More symmetry (point group, spin flip) or compiled kernels for 4×4 at half filling and
+  18 to 20 site clusters
 - ✅ Perturbative limits (`validation/perturbative.py`): weak coupling (remainder ≤ 0 and
   ∝ U²) and strong coupling at half filling (Heisenberg with J = 4t²/U, remainder ∝ U⁻³),
   run by `superconductor crosscheck`

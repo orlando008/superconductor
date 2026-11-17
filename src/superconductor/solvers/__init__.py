@@ -15,10 +15,12 @@ from superconductor.solvers.base import (
 )
 from superconductor.solvers.bethe import BetheAnsatz
 from superconductor.solvers.ed import ExactDiagonalization
+from superconductor.solvers.ed_k import MomentumED
 from superconductor.solvers.exact_limits import AtomicLimit, FreeFermions
 
 _REGISTRY: dict[str, type[Solver]] = {
-    cls.name: cls for cls in (ExactDiagonalization, FreeFermions, AtomicLimit, BetheAnsatz)
+    cls.name: cls
+    for cls in (ExactDiagonalization, FreeFermions, AtomicLimit, BetheAnsatz, MomentumED)
 }
 
 
@@ -47,6 +49,7 @@ __all__ = [
     "CostEstimate",
     "ExactDiagonalization",
     "FreeFermions",
+    "MomentumED",
     "NotApplicableError",
     "Observable",
     "Result",
