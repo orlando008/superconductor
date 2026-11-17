@@ -64,10 +64,16 @@ class MySolver(Solver):
     def applicability(self, model):
         return None if model.lattice.num_sites <= 64 else "too many sites"
 
+    def settings(self):
+        # Every numerical choice that affects accuracy: tolerances, cutoffs, sample counts.
+        # Recorded automatically in every result. Physics belongs in the model, not here.
+        return {"tolerance": 1e-10}
+
     def _solve(self, model):
         energy, double_occupancy_total = ...
         return standard_observables(model, energy, double_occupancy_total), {"notes": "..."}
 ```
 
-Statistical methods must fill in `Observable.error`. Cross-checks use it to widen the
+Report convergence diagnostics (residuals, iteration counts, truncation errors) in the
+metadata your `_solve` returns. Statistical methods must fill in `Observable.error`. Cross-checks use it to widen the
 tolerance at 2σ.

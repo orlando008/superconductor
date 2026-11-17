@@ -27,6 +27,7 @@ MAX_DIMENSION = 2_000_000
 FINITE_T_LIMIT = 6000  # finite T needs the full spectrum
 _DEGENERACY_RTOL = 1e-9
 _RESIDUAL_TOL = 1e-7
+_LANCZOS_TOL = 1e-13
 MAX_DEGENERACY = 256
 
 # Cost model constants, single core. Calibrated with benchmarks/ed_cost.py on a 4-core cloud
@@ -134,6 +135,17 @@ class ExactDiagonalization(Solver):
     def __init__(self, dense_limit: int = DENSE_LIMIT):
         self.dense_limit = dense_limit
 
+    def settings(self) -> dict[str, Any]:
+        return {
+            "dense_limit": self.dense_limit,
+            "max_dimension": MAX_DIMENSION,
+            "finite_temperature_limit": FINITE_T_LIMIT,
+            "degeneracy_rtol": _DEGENERACY_RTOL,
+            "residual_tol": _RESIDUAL_TOL,
+            "lanczos_tol": _LANCZOS_TOL,
+            "max_degeneracy": MAX_DEGENERACY,
+        }
+
     def applicability(self, model: HubbardModel) -> str | None:
         dim = sector_dimension(model)
         if dim > MAX_DIMENSION:
@@ -202,20 +214,26 @@ class ExactDiagonalization(Solver):
         if model.temperature > 0:
             return self._thermal(model, ham, double)
 
-        e0, ground_vectors, gap, method = self._ground_manifold(ham)
+        e0, ground_vectors, gap, method, passes = self._ground_manifold(ham)
         weights = np.abs(ground_vectors) ** 2
         d_total = float(np.mean(weights.T @ double))
+        # Convergence diagnostic for every path: how well each reported ground vector
+        # satisfies H v = E0 v.
+        residuals = np.linalg.norm(ham @ ground_vectors - e0 * ground_vectors, axis=0)
         metadata = {
             "sector_dimension": ham.shape[0],
             "ground_state_degeneracy": ground_vectors.shape[1],
             "method": method,
+            "max_residual": float(residuals.max()) if residuals.size else 0.0,
         }
+        if passes is not None:
+            metadata["lanczos_passes"] = passes
         if gap is not None:
             metadata["gap"] = gap
         return standard_observables(model, e0, d_total), metadata
 
     def _ground_manifold(self, ham: sp.csr_matrix):
-        """Return (E0, orthonormal basis of the full ground manifold, gap or None, method)."""
+        """Return (E0, ground-manifold basis, gap or None, method, Lanczos passes or None)."""
         dim = ham.shape[0]
         offdiag = ham - sp.diags(ham.diagonal())
         if offdiag.count_nonzero() == 0:
@@ -224,13 +242,13 @@ class ExactDiagonalization(Solver):
             ground = np.abs(diag - e0) <= _tol(e0)
             vecs = _unit_columns(dim, ground)
             rest = diag[~ground]
-            return e0, vecs, (float(rest.min() - e0) if rest.size else None), "diagonal"
+            return e0, vecs, (float(rest.min() - e0) if rest.size else None), "diagonal", None
         if dim <= self.dense_limit:
             energies, vectors = np.linalg.eigh(ham.toarray())
             ground = np.abs(energies - energies[0]) <= _tol(energies[0])
             n0 = int(ground.sum())
             gap = float(energies[n0] - energies[0]) if n0 < dim else None
-            return float(energies[0]), vectors[:, ground], gap, "dense"
+            return float(energies[0]), vectors[:, ground], gap, "dense", None
         return _lanczos_ground_manifold(ham)
 
     @staticmethod
@@ -278,7 +296,9 @@ def _lanczos_ground_manifold(ham: sp.csr_matrix):
     shift = 4.0 * radius + 1.0
     basis = np.zeros((dim, 0))
     e0 = None
+    passes = 0
     while basis.shape[1] <= MAX_DEGENERACY:
+        passes += 1
         q = basis
 
         def matvec(v, q=q):
@@ -286,7 +306,7 @@ def _lanczos_ground_manifold(ham: sp.csr_matrix):
             return ham @ v + shift * (q @ (q.T @ v))
 
         op = LinearOperator((dim, dim), matvec=matvec, dtype=float)
-        vals, vecs = eigsh(op, k=1, which="SA", v0=rng.standard_normal(dim), tol=1e-13)
+        vals, vecs = eigsh(op, k=1, which="SA", v0=rng.standard_normal(dim), tol=_LANCZOS_TOL)
         val, vec = float(vals[0]), vecs[:, 0]
         residual = np.linalg.norm(ham @ vec - val * vec)
         if residual > _RESIDUAL_TOL * max(1.0, abs(val)):
@@ -296,7 +316,7 @@ def _lanczos_ground_manifold(ham: sp.csr_matrix):
         elif val < e0 - _tol(e0):
             raise RuntimeError("Lanczos missed the ground state on its first pass")
         elif val > e0 + _tol(e0):
-            return e0, basis, val - e0, "lanczos+deflation"
+            return e0, basis, val - e0, "lanczos+deflation", passes
         vec = vec - basis @ (basis.T @ vec)  # keep the basis orthonormal
         basis = np.column_stack([basis, vec / np.linalg.norm(vec)])
     raise RuntimeError(f"ground-state degeneracy exceeds {MAX_DEGENERACY}; use dense ED")
