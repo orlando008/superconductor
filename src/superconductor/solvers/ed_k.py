@@ -343,7 +343,9 @@ class MomentumED(Solver):
     def estimate(self, model: HubbardModel) -> CostEstimate:
         """Memory falls by about the number of translations G; total time stays close to ED's,
         because the blocks together have as many non-zeros as the full sector. Enumerating the
-        orbits costs about G passes over the full sector."""
+        orbits costs about G passes over the full sector. Each parallel worker holds its own
+        block, so block memory scales with ``workers``. Ignoring that let a 4-worker 4x4 run
+        with t' != 0 exceed 15 GB, which is how this was found."""
         reason = self.applicability(model)
         dim = sector_dimension(model)
         g = model.num_sites
@@ -352,7 +354,10 @@ class MomentumED(Solver):
         enumerate_s = 3e-9 * dim * g * 4 * n
         block_nnz = nnz / g
         seconds = COST["base_seconds"] + enumerate_s + 1.5 * COST["lanczos_seconds_per_nnz"] * nnz
-        memory = 40.0 * dim + 30.0 * nnz / g + 3 * COST["sparse_bytes_per_nnz"] * block_nnz
+        # The basis and hop graph live once (shared with forked workers); every worker builds
+        # and holds its own block at the same time.
+        memory = 40.0 * dim + 30.0 * nnz / g
+        memory += self.workers * 3 * COST["sparse_bytes_per_nnz"] * block_nnz
         return CostEstimate(
             solver=self.name,
             feasible=reason is None,

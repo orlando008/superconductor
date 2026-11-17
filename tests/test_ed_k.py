@@ -131,6 +131,12 @@ def test_applicability(m, reason):
     assert reason in (EDK.applicability(m) or "")
 
 
+def test_estimate_memory_grows_with_workers():
+    m = model(SquareLattice(lx=4, ly=4), 5, 5)
+    one, four = MomentumED(workers=1).estimate(m), MomentumED(workers=4).estimate(m)
+    assert four.memory_bytes > 2 * one.memory_bytes * 0.9
+
+
 def test_estimate_reports_block_size_and_less_memory_than_ed():
     m = model(SquareLattice(lx=4, ly=4), 5, 5)
     est, plain = EDK.estimate(m), ED.estimate(m)
