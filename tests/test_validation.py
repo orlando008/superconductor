@@ -36,7 +36,7 @@ def test_crosscheck_flags_a_subtle_bug():
 def test_crosscheck_records_why_solvers_were_skipped():
     m = HubbardModel(lattice=SquareLattice(lx=2, ly=2), U=4.0, filling=Filling(n_up=2, n_dn=2))
     report = crosscheck(m)
-    assert set(report.results) == {"ed"}
+    assert set(report.results) == {"ed", "ed-k"}
     assert "U = 0" in report.skipped["free"]
 
 

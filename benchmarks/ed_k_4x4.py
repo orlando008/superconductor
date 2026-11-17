@@ -7,10 +7,17 @@ ground-state momenta and degeneracy, wall time and peak memory of the largest pr
 Set OPENBLAS_NUM_THREADS=1 when using workers. Otherwise each worker's BLAS threads compete
 for the cores and it runs slower (see solvers/ed_k.py).
 
-Measured on a 4-core, 15 GB cloud container (U = 4, t' = 0, workers = 4):
+Measured on a 4-core, 15 GB cloud container (U = 4, OPENBLAS_NUM_THREADS=1):
 
-    (4, 4)   3.3e6 states,  16 blocks of ~2.1e5:  98 s,  0.9 GB largest process
-    (5, 5)   1.9e7 states,  16 blocks of ~1.2e6:  see the pull request for issue 6
+    filling  t'     workers  states  wall     largest process  E / N
+    (4, 4)   0      4        3.3e6   98 s     0.9 GB           -1.09593111
+    (5, 5)   0      4        1.9e7   17 min   4.4 GB           -1.22380860
+    (5, 5)   -0.22  2        1.9e7   26 min   8.2 GB           -1.12616014
+
+The two (5, 5) values match Husslein, Fettes & Morgenstern, arXiv:cond-mat/9705026,
+Tables 1 and 2 (E/N = -1.223808 and -1.126160). That also shows their sign convention for t'
+is the same as ours. With t' != 0 the matrix has twice the non-zeros: 4 workers exceeded
+15 GB and were killed, while 2 workers fit. Run `superconductor estimate --solver ed-k` first.
 
 To record a result in the registry, write the model to a file and run
 ``superconductor submit model.json --solver ed-k --handle <you> --agent <agent>``.

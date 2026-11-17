@@ -158,18 +158,40 @@ def _dropped_wraparound(self):
     return h
 
 
-@pytest.mark.parametrize("bug", [_flipped_t_prime, _dropped_wraparound])
-def test_shared_hopping_bug_is_missed_by_crosscheck_but_caught_by_reference(monkeypatch, bug):
+def _solver_disagreements(report):
+    return {frozenset((c.solver_a, c.solver_b)) for c in report.failures}
+
+
+def test_translation_invariant_hopping_bug_fools_every_solver(monkeypatch):
+    """A flipped t' sign keeps the lattice translation-invariant, so ED, momentum ED and the
+    free solver all inherit it and agree with each other. Only the reference catches it."""
     lattice = SquareLattice(lx=3, ly=2)
     free_model = model(lattice, 2, 2, U=0.0)
     interacting = model(lattice, 2, 2)
-    monkeypatch.setattr(_HubbardModel, "hopping_matrix", bug)
+    monkeypatch.setattr(_HubbardModel, "hopping_matrix", _flipped_t_prime)
 
-    # The ED-vs-free comparison can't see it: both solvers inherit the same broken hopping.
     report = crosscheck(free_model)
-    assert set(report.results) == {"ed", "free"}
-    assert report.passed
+    assert set(report.results) == {"ed", "ed-k", "free"}
+    assert report.passed  # the blind spot
 
-    # The independent reference sees it immediately.
+    for m in (free_model, interacting):
+        assert not compare_with(m, build_hamiltonian(m)[0]).passed
+
+
+def test_translation_breaking_hopping_bug_is_caught_twice(monkeypatch):
+    """Dropped wrap-around bonds break translation symmetry. Momentum ED assumes that
+    symmetry, so it now disagrees with ED and the free solver (ED and free still agree with
+    each other, sharing the bug). The reference catches it as well."""
+    lattice = SquareLattice(lx=3, ly=2)
+    free_model = model(lattice, 2, 2, U=0.0)
+    interacting = model(lattice, 2, 2)
+    monkeypatch.setattr(_HubbardModel, "hopping_matrix", _dropped_wraparound)
+
+    report = crosscheck(free_model)
+    assert not report.passed
+    disagreements = _solver_disagreements(report)
+    assert frozenset(("ed", "free")) not in disagreements
+    assert disagreements <= {frozenset(("ed", "ed-k")), frozenset(("ed-k", "free"))}
+
     for m in (free_model, interacting):
         assert not compare_with(m, build_hamiltonian(m)[0]).passed
