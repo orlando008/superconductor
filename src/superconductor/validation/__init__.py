@@ -10,6 +10,14 @@ from superconductor.validation.crosscheck import (
     run_suite,
     standard_suite,
 )
+from superconductor.validation.perturbative import (
+    PerturbativeOutcome,
+    heisenberg_ground_energy,
+    perturbative_suite,
+    run_perturbative_checks,
+    strong_coupling_check,
+    weak_coupling_check,
+)
 from superconductor.validation.reference import (
     HamiltonianCheck,
     compare_with,
@@ -21,6 +29,12 @@ from superconductor.validation.sanity import CheckOutcome, sanity_check
 
 __all__ = [
     "CheckOutcome",
+    "PerturbativeOutcome",
+    "heisenberg_ground_energy",
+    "perturbative_suite",
+    "run_perturbative_checks",
+    "strong_coupling_check",
+    "weak_coupling_check",
     "HamiltonianCheck",
     "compare_with",
     "hamiltonian_suite",

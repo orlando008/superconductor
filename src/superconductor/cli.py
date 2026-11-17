@@ -128,7 +128,20 @@ def _crosscheck(args) -> int:
         f"{len(checks)} Hamiltonians checked against the independent reference, "
         f"{len(mismatches)} mismatches"
     )
-    return 0 if failures == 0 and not mismatches else 1
+
+    from superconductor.validation import run_perturbative_checks
+
+    outcomes = run_perturbative_checks()
+    pert_failures = [o for o in outcomes if o.status == "fail"]
+    for o in pert_failures:
+        print(f"FAIL  {o.name} {o.model_name}: {o.detail}")
+    passed = sum(o.status == "pass" for o in outcomes)
+    skipped = sum(o.status == "skipped" for o in outcomes)
+    print(
+        f"{len(outcomes)} perturbative-limit checks: {passed} passed, {skipped} not applicable, "
+        f"{len(pert_failures)} failed"
+    )
+    return 0 if failures == 0 and not mismatches and not pert_failures else 1
 
 
 def _fingerprint(args) -> int:

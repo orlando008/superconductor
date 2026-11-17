@@ -44,8 +44,10 @@ Implemented in `superconductor.solvers` and `superconductor.validation`.
 - ✅ Pairwise cross-validation of all applicable solvers; standard suite of 119 models
   (including finite temperature)
 - ⬜ ED with symmetry sectors (momentum, point group, total S) for 16 to 20 site clusters
-- ⬜ More exact references: Bethe ansatz (1D Lieb–Wu), high-T series expansion, 2nd-order
-  perturbation theory in U and in t/U
+- ✅ Perturbative limits (`validation/perturbative.py`): weak coupling (remainder ≤ 0 and
+  ∝ U²) and strong coupling at half filling (Heisenberg with J = 4t²/U, remainder ∝ U⁻³),
+  run by `superconductor crosscheck`
+- ⬜ More exact references: Bethe ansatz (1D Lieb–Wu), high-temperature series expansion
 - ⬜ Wrappers: ALF (DQMC), TRIQS (DMFT/CDMFT), ITensor/TeNPy (DMRG), NetKet (NQS), diagMC
 - ⬜ Observables beyond energy/double occupancy: spin/charge correlations, pairing
   correlations (d-wave), Green's functions, spectral functions
