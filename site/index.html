@@ -220,6 +220,10 @@ svg [data-tip] { cursor: default; }
 .role { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
 .role h3 { font-size: 1.1rem; }
 .role p { font-size: 0.97rem; color: var(--ink-2); }
+.role.lead { border-color: var(--accent); background: var(--accent-soft); }
+.prompt-label { font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.cmd.prompt { align-items: start; background: var(--surface); }
+.cmd.prompt code { white-space: normal; overflow-x: visible; overflow-wrap: anywhere; font-family: var(--font-body); font-size: 0.92rem; line-height: 1.5; color: var(--ink); }
 .cmd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 8px 8px 12px; }
 .cmd code { overflow-x: auto; white-space: nowrap; font-size: 0.82rem; }
 .copy { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
@@ -509,26 +513,30 @@ footer a { color: var(--ink-2); }
   <div class="wrap">
     <div class="prose">
       <span class="label">Get involved</span>
-      <h2>Built in the open, by people and their AI agents</h2>
-      <p>The work is split into small tasks, each with a clear, checkable goal. That lets many people work at the same time, with automated checks deciding what gets accepted.</p>
+      <h2>You don't need to be a scientist to help</h2>
+      <p>If you can ask an AI agent to do something, you can contribute. Your agent does the technical work, following the project's rules. Every contribution is checked automatically before it's accepted. You stay responsible for what your agent submits, so it goes in under your name.</p>
+      <p class="aside">You'll need a free GitHub account and an AI agent that can work with code, such as an AI coding assistant.</p>
     </div>
     <div class="roles">
-      <article class="role">
-        <h3>Physicists</h3>
-        <p>Review the core design, propose tests with known answers, and tell us which questions matter most. Design decisions are marked <code>needs-expert</code>.</p>
-        <a href="https://github.com/orlando008/superconductor/issues?q=is%3Aopen+label%3Aneeds-expert">Open design questions</a>
+      <article class="role lead">
+        <h3>Anyone with an AI agent</h3>
+        <p>Point your agent at the project and let it pick up one of the small, ready-made tasks. It claims the task, does the work, and sends it in for checking.</p>
+        <span class="prompt-label">Paste this into your agent</span>
+        <div class="cmd prompt"><code id="cmd-1">Read AGENTS.md in https://github.com/orlando008/superconductor, then pick an open issue labelled agent-ready that nobody has claimed, and complete it following those instructions. Name me as the responsible person.</code><button class="copy" type="button" data-copy="cmd-1">Copy</button></div>
+        <a href="https://github.com/orlando008/superconductor/issues?q=is%3Aopen+label%3Aagent-ready">See the ready-made tasks</a>
       </article>
       <article class="role">
-        <h3>Developers and agent operators</h3>
-        <p>Pick up a task labelled <code>agent-ready</code>. Each one lists what "done" means. Agents follow the rules in AGENTS.md.</p>
-        <div class="cmd"><code id="cmd-1">pip install -e ".[dev]" &amp;&amp; superconductor crosscheck</code><button class="copy" type="button" data-copy="cmd-1">Copy</button></div>
-        <a href="https://github.com/orlando008/superconductor/issues?q=is%3Aopen+label%3Aagent-ready">Tasks ready to take</a>
-      </article>
-      <article class="role">
-        <h3>Verifiers</h3>
-        <p>Rerun someone else's result and record whether you get the same answer. It's the most valuable contribution there is, and it needs no new code.</p>
-        <div class="cmd"><code id="cmd-2">superconductor status</code><button class="copy" type="button" data-copy="cmd-2">Copy</button></div>
+        <h3>Double-check someone else's work</h3>
+        <p>Ask your agent to rerun a result that someone else submitted and record whether it gets the same answer. Results only count once someone else has checked them, so this is one of the most valuable things you can do.</p>
+        <span class="prompt-label">Paste this into your agent</span>
+        <div class="cmd prompt"><code id="cmd-2">Following AGENTS.md in https://github.com/orlando008/superconductor, find a result that someone else submitted and nobody has checked yet, reproduce it, and open a pull request with the reproduction. Name me as the responsible person.</code><button class="copy" type="button" data-copy="cmd-2">Copy</button></div>
         <a href="https://github.com/orlando008/superconductor/blob/main/results/README.md">How results work</a>
+      </article>
+      <article class="role">
+        <h3>Scientists and developers</h3>
+        <p>Physicists: review the core design, propose tests with known answers, and tell us which questions matter most. Developers: take a task directly, with or without an agent.</p>
+        <div class="cmd"><code id="cmd-3">pip install -e ".[dev]" &amp;&amp; superconductor crosscheck</code><button class="copy" type="button" data-copy="cmd-3">Copy</button></div>
+        <a href="https://github.com/orlando008/superconductor/issues?q=is%3Aopen+label%3Aneeds-expert">Open design questions</a>
       </article>
     </div>
   </div>
