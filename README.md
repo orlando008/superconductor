@@ -116,4 +116,6 @@ licensing, disputes).
 
 ## License
 
-MIT
+- Code: MIT (see `LICENSE`).
+- Result data in `results/`: public domain under CC0 1.0 (see `results/LICENSE`). There are
+  no conditions on reuse, but please cite the project (see `CITATION.cff`) if you use it.

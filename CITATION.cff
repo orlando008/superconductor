@@ -1,5 +1,8 @@
 cff-version: 1.2.0
-message: "If you use this platform or its results, please cite it as below."
+message: >-
+  If you use this platform or its results, please cite it as below. The code is MIT
+  licensed. The result data in results/ is public domain (CC0 1.0), and citing it is a
+  scientific courtesy that we ask for, not a legal condition.
 title: "superconductor: a correlated-electron workbench for cuprate research"
 authors:
   - name: "The superconductor workbench contributors"
