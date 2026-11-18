@@ -563,9 +563,16 @@ class MomentumED(Solver):
         g = self._group_size(model)
         nnz = estimated_nonzeros(model)
         block_dim, block_nnz = dim / g, nnz / g
-        # Enumeration: about 2 table lookups per group element per state.
+        # Enumeration: about 2 table lookups per group element per state. Lanczos work is
+        # proportional to the sectors actually solved (one per point-group family).
+        lat = model.lattice
+        moms = [(mx, my) for my in range(lat.ly) for mx in range(lat.lx)]
+        families = len({min(momentum_family(mx, my, lat.lx, lat.ly)) for mx, my in moms})
+        solved = families / len(moms) if self.point_group else 1.0
         seconds = (
-            COST["base_seconds"] + 2.5e-9 * dim * g + 1.5 * COST["lanczos_seconds_per_nnz"] * nnz
+            COST["base_seconds"]
+            + 2.5e-9 * dim * g
+            + 1.5 * COST["lanczos_seconds_per_nnz"] * nnz * solved
         )
         shared = 7.0 * dim + 6.0 * block_nnz + g * block_dim + 16.0 * block_dim
         per_worker = 16.0 * block_nnz + 30 * 16.0 * block_dim
