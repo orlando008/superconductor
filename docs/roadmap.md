@@ -113,8 +113,10 @@ provide the pieces needed for the first round, which uses ED/DQMC numerics as hi
 
 ## Suggested next steps
 
-1. Symmetry-resolved ED to reach 16-site (4×4) clusters, the classic benchmark size.
-2. First external solver wrapper (ALF DQMC at half filling, no sign problem), joined to
-   the cross-check suite against ED on 2×2 and 4×2.
+1. First external solver wrapper (ALF DQMC at half filling, no sign problem), joined to
+   the cross-check suite against ED on 2×2, 4×2 and now 4×4 (whose half-filled ground
+   state is in the registry).
+2. Observables beyond energy and double occupancy (spin and pairing correlations), so
+   the 4×4 results can say something about magnetism and d-wave pairing.
 3. Three-band Emery model in the schema, solvable by ED on a small Cu₂O₄ cluster.
 4. A first, small layer-6 round with hidden ED answers, to exercise the scoring pipeline.
