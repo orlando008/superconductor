@@ -66,6 +66,26 @@ def test_ground_state_matches_ed(lattice, filling, U):
     assert k.metadata["max_residual"] < 1e-7
 
 
+@pytest.mark.parametrize(
+    "lattice,filling,kw",
+    [
+        (SquareLattice(lx=3, ly=2), (3, 3), {}),
+        (SquareLattice(lx=4, ly=2), (3, 2), {}),
+        (SquareLattice(lx=4, ly=2), (4, 4), {}),
+        (SquareLattice(lx=4, ly=2), (4, 4), {"U": 0.0, "t_prime": 0.0}),  # degenerate: deflation
+    ],
+)
+def test_lanczos_path_matches_ed(lattice, filling, kw):
+    """Force the Lanczos path (dense_limit=0), which the small cases above never reach.
+    A bug that only showed up there (masked coordinates leaking into ARPACK restarts) went
+    unnoticed until a 4x4 run; this keeps it covered."""
+    m = model(lattice, *filling, **kw)
+    k, e = MomentumED(dense_limit=0).solve(m), ED.solve(m)
+    assert k["energy"] == pytest.approx(e["energy"], abs=1e-9)
+    assert k["double_occupancy"] == pytest.approx(e["double_occupancy"], abs=1e-9)
+    assert k.metadata["ground_state_degeneracy"] == e.metadata["ground_state_degeneracy"]
+
+
 def test_degenerate_ground_state_across_momenta():
     """3x3, (3,2): four-fold degenerate, one state at each of four momenta (as ED finds)."""
     m = model(SquareLattice(lx=3, ly=3), 3, 2)
@@ -96,17 +116,17 @@ def test_parallel_workers_give_identical_results():
 
 
 def test_fermion_signs_matter(monkeypatch):
-    """Mutation test: dropping the translation signs breaks the spectrum check. The check is
-    sensitive to exactly the subtle part of the construction."""
-    original = OrbitBasis.__init__
+    """Mutation test: zeroing the fermion signs of the symmetry operations breaks the
+    spectrum check, so the check is sensitive to exactly the subtle part of the construction."""
+    import superconductor.solvers.ed_k as edk
 
-    def without_signs(self, m):
-        original(self, m)
-        self.stab_sign[:] = 1
-        self.state_sign[:] = 1
-        self._build_hops(m)
+    original = edk._species_tables
 
-    monkeypatch.setattr(OrbitBasis, "__init__", without_signs)
+    def no_signs(perm, n):
+        bits, parity = original(perm, n)
+        return bits, np.zeros_like(parity)
+
+    monkeypatch.setattr(edk, "_species_tables", no_signs)
     m = model(SquareLattice(lx=4, ly=1), 2, 2)
     # Without the signs the blocks stop being Hermitian, or their spectra stop matching:
     # either way the checks above fail.
@@ -124,7 +144,7 @@ def test_fermion_signs_matter(monkeypatch):
     [
         (model(SquareLattice(lx=3, ly=2, boundary_y="open"), 2, 2), "periodic"),
         (model(SquareLattice(lx=2, ly=2), 1, 1, temperature=0.5), "ground state"),
-        (model(SquareLattice(lx=4, ly=4), 8, 8), "exceeds"),
+        (model(SquareLattice(lx=5, ly=4), 10, 10), "exceeds"),
     ],
 )
 def test_applicability(m, reason):
@@ -140,5 +160,120 @@ def test_estimate_memory_grows_with_workers():
 def test_estimate_reports_block_size_and_less_memory_than_ed():
     m = model(SquareLattice(lx=4, ly=4), 5, 5)
     est, plain = EDK.estimate(m), ED.estimate(m)
-    assert est.feasible and est.details["blocks"] == 16
+    assert est.feasible and est.details["blocks"] == 32  # 16 momenta x 2 spin-flip parities
+    assert MomentumED(spin_flip=False).estimate(m).details["blocks"] == 16
     assert est.memory_bytes < plain.memory_bytes / 4
+
+
+@pytest.mark.parametrize(
+    "lattice,filling",
+    [
+        (SquareLattice(lx=2, ly=2), (2, 2)),
+        (SquareLattice(lx=3, ly=2), (3, 3)),
+        (SquareLattice(lx=4, ly=2), (3, 3)),
+    ],
+)
+def test_spin_flip_on_and_off_agree(lattice, filling):
+    """Spin flip doubles the number of sectors and halves their size; the physics can't change."""
+    m = model(lattice, *filling)
+    on, off = OrbitBasis(m, spin_flip=True), OrbitBasis(m, spin_flip=False)
+    assert on.spin_flip and not off.spin_flip
+    assert len(on.sectors()) == 2 * len(off.sectors())
+    a, b = MomentumED(spin_flip=True).solve(m), MomentumED(spin_flip=False).solve(m)
+    assert a["energy"] == pytest.approx(b["energy"], abs=1e-12)
+    assert a["double_occupancy"] == pytest.approx(b["double_occupancy"], abs=1e-12)
+    assert a.metadata["ground_state_degeneracy"] == b.metadata["ground_state_degeneracy"]
+
+
+def test_spin_flip_only_where_it_is_a_symmetry():
+    assert not OrbitBasis(model(SquareLattice(lx=2, ly=2), 2, 1)).spin_flip  # N_up != N_dn
+    assert "spin_flip" in MomentumED().settings()
+
+
+def test_checkpoints_resume_without_recomputing(tmp_path, monkeypatch):
+    import superconductor.solvers.ed_k as edk
+
+    m = model(SquareLattice(lx=3, ly=2), 3, 3)
+    first = MomentumED(checkpoint_dir=tmp_path).solve(m)
+    files = list(tmp_path.glob("ed-k-*/sector_*.json"))
+    # One checkpoint per sector actually solved (one per point-group family).
+    assert len(files) == first.metadata["sectors_solved"]
+
+    def must_not_run(*args, **kwargs):
+        raise AssertionError("a checkpointed sector was recomputed")
+
+    monkeypatch.setattr(edk, "_sector_ground_manifold", must_not_run)
+    second = MomentumED(checkpoint_dir=tmp_path).solve(m)
+    assert second["energy"] == first["energy"]
+    assert second["double_occupancy"] == first["double_occupancy"]
+
+
+def test_checkpoints_are_keyed_by_model(tmp_path):
+    """A checkpoint for one model must never be reused for another."""
+    a = model(SquareLattice(lx=3, ly=2), 3, 3)
+    b = model(SquareLattice(lx=3, ly=2), 3, 3, U=5.0)
+    MomentumED(checkpoint_dir=tmp_path).solve(a)
+    res_b = MomentumED(checkpoint_dir=tmp_path).solve(b)
+    assert res_b["energy"] == pytest.approx(ED.solve(b)["energy"], abs=1e-9)
+    assert len(list(tmp_path.glob("ed-k-*"))) == 2
+
+
+def test_shared_structure_is_frozen_and_never_modified():
+    """Regression: SciPy once canonicalized the shared CSR arrays in place while computing
+    abs() for the spectral bound, which silently corrupted every later sector."""
+    m = model(SquareLattice(lx=3, ly=2), 3, 3)
+    basis = OrbitBasis(m)
+    for arr in (basis.indptr, basis.cols, basis.elem_code, basis.amp_code):
+        assert not arr.flags.writeable
+    before = basis.cols.copy()
+    for s in basis.sectors():
+        op = basis.operator(s)
+        op.radius()
+        op @ np.ones(op.shape[0], dtype=op.dtype)
+        op.explicit()
+    assert np.array_equal(basis.cols, before)
+
+
+@pytest.mark.parametrize(
+    "lattice,filling",
+    [
+        (SquareLattice(lx=4, ly=4), (2, 2)),  # full C4v: momentum families of up to 4
+        (SquareLattice(lx=4, ly=4), (2, 1)),  # no spin flip
+        (SquareLattice(lx=4, ly=2), (3, 3)),  # rectangular: reflections only
+        (SquareLattice(lx=3, ly=3), (2, 2)),
+    ],
+)
+def test_point_group_family_blocks_have_identical_spectra(lattice, filling):
+    """The justification for solving one sector per family: every block in a family has the
+    same full spectrum, which is checked here by computing them all."""
+    from superconductor.solvers.ed_k import momentum_family
+
+    basis = OrbitBasis(model(lattice, *filling))
+    spectra = {}
+    for s in basis.sectors():
+        ham, _ = basis.block(s)
+        spectra[s] = np.linalg.eigvalsh(ham.toarray()) if ham.shape[0] else np.zeros(0)
+    for s, spec in spectra.items():
+        for mx, my in momentum_family(s[0], s[1], lattice.lx, lattice.ly):
+            other = spectra[(mx, my, s[2])]
+            assert len(other) == len(spec) and np.allclose(other, spec, atol=1e-10), (s, (mx, my))
+
+
+@pytest.mark.parametrize(
+    "lattice,filling",
+    [
+        (SquareLattice(lx=4, ly=4), (2, 2)),
+        (SquareLattice(lx=3, ly=3), (3, 2)),
+        (SquareLattice(lx=4, ly=2), (3, 3)),
+    ],
+)
+def test_point_group_shortcut_gives_identical_results(lattice, filling):
+    m = model(lattice, *filling)
+    a, b = MomentumED(point_group=True).solve(m), MomentumED(point_group=False).solve(m)
+    # Equal up to rounding: the two runs diagonalize different (equivalent) sectors.
+    assert a["energy"] == pytest.approx(b["energy"], abs=1e-12)
+    assert a["double_occupancy"] == pytest.approx(b["double_occupancy"], abs=1e-12)
+    assert a.metadata["ground_state_degeneracy"] == b.metadata["ground_state_degeneracy"]
+    assert a.metadata["ground_momenta"] == b.metadata["ground_momenta"]
+    assert a.metadata["sectors_inferred_by_point_group"] > 0
+    assert b.metadata["sectors_inferred_by_point_group"] == 0

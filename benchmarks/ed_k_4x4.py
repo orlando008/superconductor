@@ -9,15 +9,32 @@ for the cores and it runs slower (see solvers/ed_k.py).
 
 Measured on a 4-core, 15 GB cloud container (U = 4, OPENBLAS_NUM_THREADS=1):
 
-    filling  t'     workers  states  wall     largest process  E / N
-    (4, 4)   0      4        3.3e6   98 s     0.9 GB           -1.09593111
-    (5, 5)   0      4        1.9e7   17 min   4.4 GB           -1.22380860
-    (5, 5)   -0.22  2        1.9e7   26 min   8.2 GB           -1.12616014
+    filling  t'     workers  states  wall      largest process  E / N
+    (4, 4)   0      4        3.3e6   86 s      0.4 GB           -1.09593111
+    (5, 5)   0      4        1.9e7   17 min    4.4 GB           -1.22380860
+    (5, 5)   -0.22  2        1.9e7   26 min    8.2 GB           -1.12616014
+    (7, 7)   0      2        1.3e8   about 2 h 6.7 GB           -0.98403678
+    (8, 8)   0      2        1.7e8   86 min    7.3 GB           -0.85136593
 
-The two (5, 5) values match Husslein, Fettes & Morgenstern, arXiv:cond-mat/9705026,
-Tables 1 and 2 (E/N = -1.223808 and -1.126160). That also shows their sign convention for t'
-is the same as ours. With t' != 0 the matrix has twice the non-zeros: 4 workers exceeded
-15 GB and were killed, while 2 workers fit. Run `superconductor estimate --solver ed-k` first.
+(4, 4) is the current solver; the (5, 5) rows predate spin flip and the point-group
+shortcut, which make them faster now. The (7, 7) time adds the run before a container
+restart, resumed from its checkpoints, to the 60 min after it.
+
+Published comparisons:
+  - (5, 5): Husslein, Fettes & Morgenstern, arXiv:cond-mat/9705026, Tables 1 and 2,
+    E/N = -1.223808 and -1.126160. That also shows their sign convention for t' is the same
+    as ours.
+  - (8, 8), half filling: Qin, Shi & Zhang, "A benchmark study of the two-dimensional Hubbard
+    model with auxiliary-field quantum Monte Carlo method" (OSTI 1565498), Table IV:
+    E = -13.616(6), potential energy 7.370(8), kinetic energy -20.989(4). This run gives
+    -13.6218548, 7.36804 and -20.98989: all within their error bars.
+  - (7, 7): Fano, Ortolani & Parola, Phys. Rev. B 42, 6877 (1990), as summarized by Cini,
+    Perfetto & Stefanucci (arXiv:cond-mat/0010292): for U/t > 3 the ground state is
+    three-fold degenerate, at K = (0,0), (pi,0) and (0,pi). This run finds exactly that.
+
+With t' != 0 the matrix has twice the non-zeros: 4 workers exceeded 15 GB and were killed,
+while 2 workers fit. Run `superconductor estimate --solver ed-k` first. For long runs set
+SUPERCONDUCTOR_CHECKPOINT_DIR, so an interrupted run resumes where it stopped.
 
 To record a result in the registry, write the model to a file and run
 ``superconductor submit model.json --solver ed-k --handle <you> --agent <agent>``.

@@ -33,8 +33,9 @@ science and the plan in plain language, with interactive visuals (source in [`si
   - `free`: exact solution at U = 0
   - `atomic`: exact solution at t = t' = 0
   - `bethe`: exact ground states of periodic 1D chains at any U (Lieb–Wu Bethe ansatz)
-  - `ed-k`: exact diagonalization block by block in total momentum, for periodic lattices;
-    about 16 times less memory than `ed` on 4×4, which brings doped 4×4 clusters within reach
+  - `ed-k`: exact diagonalization in symmetry sectors (momentum and spin flip, one sector per
+    point-group family), for periodic lattices; solves 4×4 clusters including half filling
+    on a 15 GB machine
 - Automatic cross-validation (`crosscheck`) across a standard suite of models, plus rigorous
   sanity checks on every result (double-occupancy bounds, free-fermion energy bounds).
 - A results registry: `submit`, `reproduce`, `validate` and `status` commands for

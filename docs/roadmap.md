@@ -43,10 +43,11 @@ Implemented in `superconductor.solvers` and `superconductor.validation`.
   run solver code
 - ✅ Pairwise cross-validation of all applicable solvers; standard suite of 119 models
   (including finite temperature)
-- ✅ ED with momentum sectors (`ed-k`): every block checked against plain ED; doped 4×4
-  clusters solved on a 15 GB machine and compared with published values
-- ⬜ More symmetry (point group, spin flip) or compiled kernels for 4×4 at half filling and
-  18 to 20 site clusters
+- ✅ ED with symmetry sectors (`ed-k`): momentum and spin flip, one sector per point-group
+  family, and resumable checkpoints. Every block is checked against plain ED. 4×4 clusters,
+  including half filling (1.7 × 10⁸ states), solved on a 15 GB machine and compared with
+  published values
+- ⬜ Compiled matrix-free kernels for 18 to 20 site clusters
 - ✅ Perturbative limits (`validation/perturbative.py`): weak coupling (remainder ≤ 0 and
   ∝ U²) and strong coupling at half filling (Heisenberg with J = 4t²/U, remainder ∝ U⁻³),
   run by `superconductor crosscheck`
@@ -112,8 +113,10 @@ provide the pieces needed for the first round, which uses ED/DQMC numerics as hi
 
 ## Suggested next steps
 
-1. Symmetry-resolved ED to reach 16-site (4×4) clusters, the classic benchmark size.
-2. First external solver wrapper (ALF DQMC at half filling, no sign problem), joined to
-   the cross-check suite against ED on 2×2 and 4×2.
+1. First external solver wrapper (ALF DQMC at half filling, no sign problem), joined to
+   the cross-check suite against ED on 2×2, 4×2 and now 4×4 (whose half-filled ground
+   state is in the registry).
+2. Observables beyond energy and double occupancy (spin and pairing correlations), so
+   the 4×4 results can say something about magnetism and d-wave pairing.
 3. Three-band Emery model in the schema, solvable by ED on a small Cu₂O₄ cluster.
 4. A first, small layer-6 round with hidden ED answers, to exercise the scoring pipeline.

@@ -264,6 +264,7 @@ footer a { color: var(--ink-2); }
 .doc .issues span { color: var(--ink-2); font-size: 0.95rem; }
 .doc .steps li::marker { font-family: var(--font-display); font-weight: 700; color: var(--accent); }
 .doc .stamp { color: var(--muted); font-size: 0.9rem; }
+.doc .refs { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; font-size: 0.92rem; color: var(--ink-2); }
 @media (max-width: 700px) { .doc .issues { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head><!--pages-only-->
@@ -326,7 +327,7 @@ footer a { color: var(--ink-2); }
         <thead><tr><th>Solver</th><th>What it covers</th></tr></thead>
         <tbody>
           <tr><td><code>ed</code></td><td>Exact diagonalization: dense, or Lanczos with a deflation check that the degenerate ground manifold is complete (plain ARPACK silently returned a wrong ground energy in one degenerate case); finite T from the full spectrum.</td></tr>
-          <tr><td><code>ed-k</code></td><td>ED block by block in total momentum. Doped 4×4 clusters are reachable on a 15 GB machine.</td></tr>
+          <tr><td><code>ed-k</code></td><td>ED in symmetry sectors (momentum and spin flip, one sector per point-group family), with resumable checkpoints. Solves 4×4 clusters, including half filling (1.7 × 10⁸ states), on a 15 GB machine.</td></tr>
           <tr><td><code>free</code></td><td>U = 0, exact at T = 0 and at finite T in the canonical ensemble.</td></tr>
           <tr><td><code>atomic</code></td><td>t = t′ = 0, exact at any U and T.</td></tr>
           <tr><td><code>bethe</code></td><td>Lieb–Wu ground states of periodic 1D rings at any U &gt; 0, including higher-spin ground states of a sector.</td></tr>
@@ -346,18 +347,26 @@ footer a { color: var(--ink-2); }
       <li><b>Mutation tests:</b> each check is shown to catch a deliberately planted bug.</li>
       <li><b>Results registry:</b> records are append-only and content-addressed. A result counts as "reproduced" only when a different person reruns it. Numerical settings, convergence diagnostics and hardware are recorded with every result.</li>
     </ul>
-    <p class="stamp">As of November 2026: about 1,000 solver comparisons with 0 disagreements, 125 Hamiltonians matching the independent reference, and 489 tests.</p>
+    <p class="stamp">As of November 2026: about 1,000 solver comparisons with 0 disagreements, 125 Hamiltonians matching the independent reference, and 507 tests.</p>
     <h3>Literature check</h3>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>4×4, 5↑ + 5↓, U = 4</th><th>E/N, this project (<code>ed-k</code>)</th><th>E/N, published</th></tr></thead>
+        <thead><tr><th>4×4, U = 4, periodic</th><th>This project (<code>ed-k</code>)</th><th>Published</th></tr></thead>
         <tbody>
-          <tr><td>t′ = 0</td><td>−1.22380860</td><td>−1.223808</td></tr>
-          <tr><td>t′ = −0.22</td><td>−1.12616014</td><td>−1.126160</td></tr>
+          <tr><td>5↑ + 5↓, t′ = 0: E/N</td><td>−1.22380860</td><td>−1.223808 [1]</td></tr>
+          <tr><td>5↑ + 5↓, t′ = −0.22: E/N</td><td>−1.12616014</td><td>−1.126160 [1]</td></tr>
+          <tr><td>8↑ + 8↓ (half filling): E</td><td>−13.6218548</td><td>−13.616(6) [2]</td></tr>
+          <tr><td>8↑ + 8↓: potential energy U Σ⟨n<sub>i↑</sub>n<sub>i↓</sub>⟩</td><td>7.36804</td><td>7.370(8) [2]</td></tr>
+          <tr><td>8↑ + 8↓: kinetic energy</td><td>−20.98989</td><td>−20.989(4) [2]</td></tr>
+          <tr><td>7↑ + 7↓: ground state</td><td>3-fold, K = (0,0), (π,0), (0,π)</td><td>same [3]</td></tr>
         </tbody>
       </table>
     </div>
-    <p>Published values: Husslein, Fettes &amp; Morgenstern, <a href="https://arxiv.org/abs/cond-mat/9705026">arXiv:cond-mat/9705026</a>, Tables 1 and 2 (energy per site). The t′ match also shows that paper uses the same sign convention for t′.</p>
+    <ol class="refs">
+      <li>Husslein, Fettes &amp; Morgenstern, <a href="https://arxiv.org/abs/cond-mat/9705026">arXiv:cond-mat/9705026</a>, Tables 1 and 2 (energy per site). The t′ match also shows that paper uses the same sign convention for t′.</li>
+      <li>Qin, Shi &amp; Zhang, <a href="https://www.osti.gov/servlets/purl/1565498">"A benchmark study of the two-dimensional Hubbard model with auxiliary-field quantum Monte Carlo method"</a>, Table IV (numerically exact at half filling, with statistical error bars). Same Hamiltonian convention as ours.</li>
+      <li>Fano, Ortolani &amp; Parola, Phys. Rev. B 42, 6877 (1990), as summarized by Cini, Perfetto &amp; Stefanucci, <a href="https://arxiv.org/abs/cond-mat/0010292">arXiv:cond-mat/0010292</a> (for U/t &gt; 3).</li>
+    </ol>
   </div>
 </section>
 
@@ -371,7 +380,6 @@ footer a { color: var(--ink-2); }
       <li><a href="https://github.com/orlando008/superconductor/issues/21">#21 Uncertainty and trust levels</a><span>Separating statistical from systematic error, and grading how independent a reproduction is.</span></li>
       <li><a href="https://github.com/orlando008/superconductor/issues/8">#8 Three-band Emery model</a><span>Schema design and phase conventions.</span></li>
       <li><a href="https://github.com/orlando008/superconductor/issues/9">#9 ALF determinant QMC wrapper</a><span>Canonical versus grand-canonical comparison, Trotter extrapolation, error bars.</span></li>
-      <li><a href="https://github.com/orlando008/superconductor/issues/26">#26 4×4 at half filling</a><span>Whether point group and spin-flip symmetry is the right next step.</span></li>
     </ul>
     <p>Equally valuable: <b>tell us which questions matter most</b>, and what in the current design an expert would distrust.</p>
   </div>
